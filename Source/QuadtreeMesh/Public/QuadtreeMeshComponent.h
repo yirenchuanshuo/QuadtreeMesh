@@ -50,5 +50,9 @@ private:
 
 #endif
 	//void NotifyIfMeshMaterialChanged();
+
+public:
+	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "1", ClampMax = "12"))
+	int32 TessellationFactor = 6;
 	
 };
