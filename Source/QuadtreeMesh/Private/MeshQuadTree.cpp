@@ -104,7 +104,7 @@ void FMeshQuadTree::Unlock(bool bPruneRedundantNodes)
 				// Move back one step down
 				EndIndex--;
 			}
-			else if (!NodeData.Nodes[NodeIndex].HasMaterial && NodeData.Nodes[NodeIndex].HasCompleteSubtree && NodeData.Nodes[NodeIndex].IsSubtreeSameWaterBody)
+			else if (!NodeData.Nodes[NodeIndex].HasMaterial && NodeData.Nodes[NodeIndex].HasCompleteSubtree && NodeData.Nodes[NodeIndex].IsSubtreeSameQuadMesh)
 			{
 				for (int32 i = 0; i < 4; i++)
 				{
