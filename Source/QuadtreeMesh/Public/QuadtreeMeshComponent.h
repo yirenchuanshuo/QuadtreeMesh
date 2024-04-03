@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Runtime/Engine/Classes/Components/MeshComponent.h"
+#include "MeshQuadTree.h"
 #include "QuadtreeMeshComponent.generated.h"
 
 
@@ -15,6 +16,8 @@ class UQuadtreeMeshComponent : public UMeshComponent
 public:
 	// Sets default values for this component's properties
 	UQuadtreeMeshComponent();
+
+	virtual ~UQuadtreeMeshComponent();
 
 	//UObject interface
 	virtual void PostLoad() override;
@@ -31,17 +34,26 @@ public:
 	virtual bool ShouldRenderSelected() const override;
 #endif
 	
-
+	virtual void CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams, FComponentPSOPrecacheParamsList& OutParams) override;
 	//INavRelevantInterface interface
 	virtual bool IsNavigationRelevant() const override { return false; }
 
-	UPROPERTY()
-	TObjectPtr<UMaterialInterface> MeshDefaultMaterial;
+	const FMeshQuadTree& GetWaterQuadTree() const { return MeshQuadTree; }
+
+	void MarkQuadMeshGridDirty() { bNeedsRebuild = true; }
+
+	void Update();
 
 protected:
 
 
 private:
+	//USceneComponent interface
+	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
+
+	/** Based on all water bodies in the scene, rebuild the water mesh */
+	void RebuildQuadMesh(float InTileSize, const FIntPoint& InExtentInTiles);
+	
 #if WITH_EDITOR
 	
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -54,5 +66,21 @@ private:
 public:
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "1", ClampMax = "12"))
 	int32 TessellationFactor = 6;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> MeshDefaultMaterial;
+
+private:
+	/** World size of the quadmesh tiles at LOD0. Multiply this with the ExtentInTiles to get the world extents of the system */
+	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "100", AllowPrivateAcces = "true"))
+	float TileSize = 2400.0f;
+
+	/** The extent of the quadmesh in number of tiles. Maximum number of tiles for this system will be ExtentInTiles.X*2*ExtentInTiles.Y*2 */
+	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "1", AllowPrivateAcces = "true"))
+	FIntPoint ExtentInTiles = FIntPoint(64, 64);
+	
+	FMeshQuadTree MeshQuadTree;
+
+	bool bNeedsRebuild = true;
 	
 };

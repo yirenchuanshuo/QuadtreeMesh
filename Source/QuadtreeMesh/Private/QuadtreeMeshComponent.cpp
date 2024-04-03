@@ -1,5 +1,6 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 #include "QuadtreeMeshComponent.h"
+#include "EngineUtils.h"
 #include "QuadtreeMeshSceneProxy.h"
 
 // Sets default values for this component's properties
@@ -23,6 +24,10 @@ UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 	};
 	static FConstructorStatics ConstructorStatics;
 	MeshDefaultMaterial = ConstructorStatics.DefautMaterial.Object;
+}
+
+UQuadtreeMeshComponent::~UQuadtreeMeshComponent()
+{
 }
 
 void UQuadtreeMeshComponent::PostLoad()
@@ -75,7 +80,68 @@ bool UQuadtreeMeshComponent::ShouldRenderSelected() const
 	return bShouldRenderSelected;
 }
 
+void UQuadtreeMeshComponent::CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams,
+	FComponentPSOPrecacheParamsList& OutParams)
+{
+	Super::CollectPSOPrecacheData(BasePrecachePSOParams, OutParams);
+}
 
+
+void UQuadtreeMeshComponent::Update()
+{
+	if(bNeedsRebuild)
+	{
+		RebuildQuadMesh(TileSize,ExtentInTiles);
+		PrecachePSOs();
+		bNeedsRebuild = false;
+	}
+}
+
+FBoxSphereBounds UQuadtreeMeshComponent::CalcBounds(const FTransform& LocalToWorld) const
+{
+	// Always return valid bounds (tree is initialized with invalid bounds and if nothing is inserted, the tree bounds will stay invalid)
+	FBox NewBounds = MeshQuadTree.GetBounds();
+
+	if (NewBounds.Min.Z >= NewBounds.Max.Z)
+	{
+		NewBounds.Min.Z = 0.0f;
+		NewBounds.Max.Z = 100.0f;
+	}
+	
+	return NewBounds;
+}
+
+void UQuadtreeMeshComponent::RebuildQuadMesh(float InTileSize, const FIntPoint& InExtentInTiles)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(RebuildQuadMesh);
+	// Position snapped to the grid
+	const FVector2D GridPosition = FVector2D(FMath::GridSnap<FVector::FReal>(GetComponentLocation().X, InTileSize), FMath::GridSnap<FVector::FReal>(GetComponentLocation().Y, InTileSize));
+	const FVector2D WorldExtent = FVector2D(InTileSize * InExtentInTiles.X, InTileSize * InExtentInTiles.Y);
+
+	const FBox2D MeshWorldBox = FBox2D(-WorldExtent + GridPosition, WorldExtent + GridPosition);
+	MeshQuadTree.InitTree(MeshWorldBox,InTileSize, InExtentInTiles);
+
+	const float QuadMeshHeight = this->GetComponentLocation().Z;
+	FQuadMeshRenderData RenderData;
+	if(!ShouldRender())
+	{
+		return;
+	}
+	RenderData.Material = OverrideMaterials[0];
+	RenderData.SurfaceBaseHeight = this->GetComponentLocation().Z;
+	
+	AActor* QuadMeshOwner = GetOwner();
+#if WITH_QUADMESH_SELECTION_SUPPORT
+	RenderData.HitProxy = new HActor(/*InActor = */QuadMeshOwner, /*InPrimComponent = */nullptr);
+	RenderData.bQuadMeshSelected = QuadMeshOwner->IsSelected();
+#endif
+
+	const uint32 QuadMeshRenderDataIndex = MeshQuadTree.AddQuadMeshRenderData(RenderData);
+	const FBox OceanBounds = QuadMeshOwner->GetComponentsBoundingBox();
+	MeshQuadTree.AddQuadMeshTilesInsideBounds(OceanBounds, QuadMeshRenderDataIndex);
+	MeshQuadTree.Unlock(true);
+	MarkRenderStateDirty();
+}
 
 void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {

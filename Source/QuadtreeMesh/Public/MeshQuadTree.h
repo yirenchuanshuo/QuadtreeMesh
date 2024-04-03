@@ -115,7 +115,7 @@ public:
 	bool QueryTileBoundsAtLocation(const FVector2D& InWorldLocationXY, FBox& OutWorldBounds) const;
 
 	/** Add water body render data to this tree. Returns the index in the array. Use this index to add tiles with this water body to the tree, see AddWaterTilesInsideBounds(..) */
-	uint32 AddWaterBodyRenderData(const FQuadMeshRenderData& InWaterBodyRenderData) { return NodeData.QuadMeshRenderData.Add(InWaterBodyRenderData); }
+	uint32 AddQuadMeshRenderData(const FQuadMeshRenderData& InQuadMeshRenderData) { return NodeData.QuadMeshRenderData.Add(InQuadMeshRenderData); }
 
 	/** Get bounds of the root node if there is one, otherwise some default box */
 	FBox GetBounds() const { return NodeData.Nodes.Num() > 0 ? NodeData.Nodes[0].Bounds : FBox(-FVector::OneVector, FVector::OneVector); }
