@@ -4,9 +4,9 @@
 
 void FMeshQuadTree::GatherHitProxies(TArray<TRefCountPtr<HHitProxy>>& OutHitProxies) const
 {
-	for(const FQuadMeshRenderData& QuadMeshRenderData : NodeData.QuadMeshRenderData)
+	for(const FQuadtreeMeshRenderData& QuadtreeMeshRenderData : NodeData.QuadtreeMeshRenderData)
 	{
-		OutHitProxies.Add(QuadMeshRenderData.HitProxy);
+		OutHitProxies.Add(QuadtreeMeshRenderData.HitProxy);
 	}
 }
 
@@ -34,8 +34,8 @@ void FMeshQuadTree::InitTree(const FBox2D& InBounds, float InTileSize, FIntPoint
 	NodeData.Nodes.Empty(FMath::Square(RootDim) * 4 / 3.0f);
 
 	// Add defaulted water body render data to slot 0. This is the "null" render data, pointed to by all newly created nodes. Has lowest priority so it will always be overwritten
-	NodeData.QuadMeshRenderData.Empty(1);
-	NodeData.QuadMeshRenderData.AddDefaulted();
+	NodeData.QuadtreeMeshRenderData.Empty(1);
+	NodeData.QuadtreeMeshRenderData.AddDefaulted();
 
 	ensure(NodeData.Nodes.Num() == 0);
 
@@ -94,7 +94,7 @@ void FMeshQuadTree::Unlock(bool bPruneRedundantNodes)
 			FNode& ParentNode = NodeData.Nodes[NodeData.Nodes[NodeIndex].ParentIndex];
 
 			// Parent has complete subtree of the same water body, this node is redundant
-			if (ParentNode.HasCompleteSubtree && ParentNode.IsSubtreeSameQuadMesh)
+			if (ParentNode.HasCompleteSubtree && ParentNode.IsSubtreeSameQuadtreeMesh)
 			{
 				// Delete all children (not strictly necessary, but now we don't leave any dangling/incorrect child pointers around)
 				FMemory::Memzero(&ParentNode.Children, sizeof(uint32) * 4);
@@ -104,7 +104,7 @@ void FMeshQuadTree::Unlock(bool bPruneRedundantNodes)
 				// Move back one step down
 				EndIndex--;
 			}
-			else if (!NodeData.Nodes[NodeIndex].HasMaterial && NodeData.Nodes[NodeIndex].HasCompleteSubtree && NodeData.Nodes[NodeIndex].IsSubtreeSameQuadMesh)
+			else if (!NodeData.Nodes[NodeIndex].HasMaterial && NodeData.Nodes[NodeIndex].HasCompleteSubtree && NodeData.Nodes[NodeIndex].IsSubtreeSameQuadtreeMesh)
 			{
 				for (int32 i = 0; i < 4; i++)
 				{
@@ -127,13 +127,13 @@ void FMeshQuadTree::Unlock(bool bPruneRedundantNodes)
 	bIsReadOnly = true;
 }
 
-void FMeshQuadTree::AddQuadMeshTilesInsideBounds(const FBox& InBounds, uint32 InWaterBodyIndex)
+void FMeshQuadTree::AddQuadtreeMeshTilesInsideBounds(const FBox& InBounds, uint32 InWaterBodyIndex)
 {
 	check(!bIsReadOnly);
 	NodeData.Nodes[0].AddNodes(NodeData, FBox(FVector(TileRegion.Min, 0.0f), FVector(TileRegion.Max, 0.0f)),  InBounds, InWaterBodyIndex, TreeDepth, 0);
 }
 
-void FMeshQuadTree::AddQuadMesh(const TArray<FVector2D>& InPoly, const FBox& InOceanBounds, uint32 InQuadMeshIndex)
+void FMeshQuadTree::AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox& InOceanBounds, uint32 InQuadtreeMeshIndex)
 {
 	check(!bIsReadOnly);
 	const FBox2D OceanBounds(FVector2D(InOceanBounds.Min), FVector2D(InOceanBounds.Max));
@@ -142,7 +142,7 @@ void FMeshQuadTree::AddQuadMesh(const TArray<FVector2D>& InPoly, const FBox& InO
 	const FVector2D LeafSizeShrink(LeafSize * 0.25, LeafSize * 0.25);
 	// No more verts in this half box, mark as water
 	const FBox TileBounds(FVector(OceanBounds.Min + LeafSizeShrink, ZBound.X), FVector(OceanBounds.Max - LeafSizeShrink, ZBound.Y));
-	AddQuadMeshTilesInsideBounds(TileBounds, InQuadMeshIndex);
+	AddQuadtreeMeshTilesInsideBounds(TileBounds, InQuadtreeMeshIndex);
 	
 }
 
@@ -167,20 +167,20 @@ void FMeshQuadTree::BuildMaterialIndices()
 		return *Found;
 	};
 
-	for (int32 Idx = 0; Idx < NodeData.QuadMeshRenderData.Num(); ++Idx)
+	for (int32 Idx = 0; Idx < NodeData.QuadtreeMeshRenderData.Num(); ++Idx)
 	{
-		FQuadMeshRenderData& Data = NodeData.QuadMeshRenderData[Idx];
+		FQuadtreeMeshRenderData& Data = NodeData.QuadtreeMeshRenderData[Idx];
 		Data.MaterialIndex = GetMatIdx(Data.Material);
 	}
 
 	
 
-	QuadMeshMaterials.Empty(MatToIdxMap.Num());
-	QuadMeshMaterials.AddUninitialized(MatToIdxMap.Num());
+	QuadtreeMeshMaterials.Empty(MatToIdxMap.Num());
+	QuadtreeMeshMaterials.AddUninitialized(MatToIdxMap.Num());
 
 	for (TMap<FMaterialRenderProxy*, int32>::TConstIterator It(MatToIdxMap); It; ++It)
 	{
-		QuadMeshMaterials[It->Value] = It->Key;
+		QuadtreeMeshMaterials[It->Value] = It->Key;
 	}
 }
 
@@ -248,15 +248,15 @@ bool FMeshQuadTree::QueryTileBoundsAtLocation(const FVector2D& InWorldLocationXY
 }
 
 bool FMeshQuadTree::FNode::CanRender(int32 InDensityLevel, int32 InForceCollapseDensityLevel,
-                                     const FQuadMeshRenderData& InQuadMeshRenderData) const
+                                     const FQuadtreeMeshRenderData& InQuadtreeMeshRenderData) const
 {
-	return InQuadMeshRenderData.Material && IsSubtreeSameQuadMesh && ((InDensityLevel > InForceCollapseDensityLevel) || HasCompleteSubtree);
+	return InQuadtreeMeshRenderData.Material && IsSubtreeSameQuadtreeMesh && ((InDensityLevel > InForceCollapseDensityLevel) || HasCompleteSubtree);
 }
 
 void FMeshQuadTree::FNode::SelectLODRefinement(const FNodeData& InNodeData, int32 InDensityLevel, int32 InLODLevel,
 	const FTraversalDesc& InTraversalDesc, FTraversalOutput& Output) const
 {
-	const FQuadMeshRenderData& QuadMeshRenderData = InNodeData.QuadMeshRenderData[QuadMeshIndex];
+	const FQuadtreeMeshRenderData& QuadtreeMeshRenderData = InNodeData.QuadtreeMeshRenderData[QuadtreeMeshIndex];
 	const FVector CenterPosition = Bounds.GetCenter();
 	const FVector Extent = Bounds.GetExtent();
 
@@ -264,9 +264,9 @@ void FMeshQuadTree::FNode::SelectLODRefinement(const FNodeData& InNodeData, int3
 	if (InTraversalDesc.Frustum.IntersectBox(CenterPosition, Extent))
 	{
 		// This LOD can represent all its leaf nodes, simply add node
-		if (CanRender(InDensityLevel, InTraversalDesc.ForceCollapseDensityLevel, QuadMeshRenderData))
+		if (CanRender(InDensityLevel, InTraversalDesc.ForceCollapseDensityLevel, QuadtreeMeshRenderData))
 		{
-			AddNodeForRender(InNodeData, QuadMeshRenderData, InDensityLevel, InLODLevel, InTraversalDesc, Output);
+			AddNodeForRender(InNodeData, QuadtreeMeshRenderData, InDensityLevel, InLODLevel, InTraversalDesc, Output);
 		}
 		else
 		{
@@ -285,7 +285,7 @@ void FMeshQuadTree::FNode::SelectLODRefinement(const FNodeData& InNodeData, int3
 void FMeshQuadTree::FNode::SelectLOD(const FNodeData& InNodeData, int32 InLODLevel,
                                      const FTraversalDesc& InTraversalDesc, FTraversalOutput& Output) const
 {
-	const FQuadMeshRenderData& QuadMeshRenderData = InNodeData.QuadMeshRenderData[QuadMeshIndex];
+	const FQuadtreeMeshRenderData& QuadtreeMeshRenderData = InNodeData.QuadtreeMeshRenderData[QuadtreeMeshIndex];
 	const FVector CenterPosition = Bounds.GetCenter();
 	const FVector Extent = Bounds.GetExtent();
 
@@ -304,9 +304,9 @@ void FMeshQuadTree::FNode::SelectLOD(const FNodeData& InNodeData, int32 InLODLev
 	if (ClosestDistanceToTile > GetLODDistance(InLODLevel, InTraversalDesc.LODScale))
 	{
 		// This node is capable of representing all its leaf nodes, so just submit this node
-		if (CanRender(0, InTraversalDesc.ForceCollapseDensityLevel, QuadMeshRenderData))
+		if (CanRender(0, InTraversalDesc.ForceCollapseDensityLevel, QuadtreeMeshRenderData))
 		{
-			AddNodeForRender(InNodeData, QuadMeshRenderData, 1, InLODLevel + 1, InTraversalDesc, Output);
+			AddNodeForRender(InNodeData, QuadtreeMeshRenderData, 1, InLODLevel + 1, InTraversalDesc, Output);
 		}
 		else
 		{
@@ -327,9 +327,9 @@ void FMeshQuadTree::FNode::SelectLOD(const FNodeData& InNodeData, int32 InLODLev
 	// Last LOD, simply add node
 	if (InLODLevel == 0)
 	{
-		if (CanRender(0, InTraversalDesc.ForceCollapseDensityLevel, QuadMeshRenderData))
+		if (CanRender(0, InTraversalDesc.ForceCollapseDensityLevel, QuadtreeMeshRenderData))
 		{
-			AddNodeForRender(InNodeData, QuadMeshRenderData, 0, InLODLevel, InTraversalDesc, Output);
+			AddNodeForRender(InNodeData, QuadtreeMeshRenderData, 0, InLODLevel, InTraversalDesc, Output);
 		}
 	}
 	else
@@ -338,9 +338,9 @@ void FMeshQuadTree::FNode::SelectLOD(const FNodeData& InNodeData, int32 InLODLev
 		if (ClosestDistanceToTile > GetLODDistance(InLODLevel - 1, InTraversalDesc.LODScale) || InLODLevel == InTraversalDesc.LowestLOD)
 		{
 			// This node is capable of representing all its leaf nodes, so just submit this node
-			if (CanRender(0, InTraversalDesc.ForceCollapseDensityLevel, QuadMeshRenderData))
+			if (CanRender(0, InTraversalDesc.ForceCollapseDensityLevel, QuadtreeMeshRenderData))
 			{
-				AddNodeForRender(InNodeData, QuadMeshRenderData, 0, InLODLevel, InTraversalDesc, Output);
+				AddNodeForRender(InNodeData, QuadtreeMeshRenderData, 0, InLODLevel, InTraversalDesc, Output);
 			}
 			else
 			{
@@ -357,7 +357,7 @@ void FMeshQuadTree::FNode::SelectLOD(const FNodeData& InNodeData, int32 InLODLev
 		else
 		{
 			// If this node has a complete subtree it will not contain any actual children, they are implicit to save memory so we generate them here
-			if (HasCompleteSubtree && IsSubtreeSameQuadMesh)
+			if (HasCompleteSubtree && IsSubtreeSameQuadtreeMesh)
 			{
 				FNode ChildNode;
 				const FVector HalfBoundSize(Extent.X, Extent.Y, Extent.Z*2.0f);
@@ -370,9 +370,9 @@ void FMeshQuadTree::FNode::SelectLOD(const FNodeData& InNodeData, int32 InLODLev
 
 					// Create a temporary node to traverse
 					ChildNode.HasCompleteSubtree = 1;
-					ChildNode.IsSubtreeSameQuadMesh = 1;
-					ChildNode.TransitionQuadMeshIndex = TransitionQuadMeshIndex;
-					ChildNode.QuadMeshIndex = QuadMeshIndex;
+					ChildNode.IsSubtreeSameQuadtreeMesh = 1;
+					ChildNode.TransitionQuadtreeMeshIndex = TransitionQuadtreeMeshIndex;
+					ChildNode.QuadtreeMeshIndex = QuadtreeMeshIndex;
 					ChildNode.Bounds = ChildBounds;
 
 					ChildNode.SelectLOD(InNodeData, InLODLevel - 1, InTraversalDesc, Output);
@@ -395,7 +395,7 @@ void FMeshQuadTree::FNode::SelectLOD(const FNodeData& InNodeData, int32 InLODLev
 void FMeshQuadTree::FNode::SelectLODWithinBounds(const FNodeData& InNodeData, int32 InLODLevel,
                                                  const FTraversalDesc& InTraversalDesc, FTraversalOutput& Output) const
 {
-	const FQuadMeshRenderData& QuadMeshRenderData = InNodeData.QuadMeshRenderData[QuadMeshIndex];
+	const FQuadtreeMeshRenderData& QuadtreeMeshRenderData = InNodeData.QuadtreeMeshRenderData[QuadtreeMeshIndex];
 	const FVector CenterPosition = Bounds.GetCenter();
 	const FVector Extent = Bounds.GetExtent();
 
@@ -406,19 +406,19 @@ void FMeshQuadTree::FNode::SelectLODWithinBounds(const FNodeData& InNodeData, in
 		return;
 	}
 
-	check(InTraversalDesc.TessellatedQuadMeshBounds.bIsValid);
+	check(InTraversalDesc.TessellatedQuadtreeMeshBounds.bIsValid);
 	if (InLODLevel == 0)
 	{
-		if ((InTraversalDesc.TessellatedQuadMeshBounds.IsInsideOrOn(FVector2D(Bounds.Min)) && InTraversalDesc.TessellatedQuadMeshBounds.IsInsideOrOn(FVector2D(Bounds.Max))) &&
-			CanRender(0, InTraversalDesc.ForceCollapseDensityLevel, QuadMeshRenderData))
+		if ((InTraversalDesc.TessellatedQuadtreeMeshBounds.IsInsideOrOn(FVector2D(Bounds.Min)) && InTraversalDesc.TessellatedQuadtreeMeshBounds.IsInsideOrOn(FVector2D(Bounds.Max))) &&
+			CanRender(0, InTraversalDesc.ForceCollapseDensityLevel, QuadtreeMeshRenderData))
 		{
-			AddNodeForRender(InNodeData, QuadMeshRenderData, 0, InLODLevel, InTraversalDesc, Output);
+			AddNodeForRender(InNodeData, QuadtreeMeshRenderData, 0, InLODLevel, InTraversalDesc, Output);
 		}
 	}
 	else
 	{
 		// If this node has a complete subtree it will not contain any actual children, they are implicit to save memory so we generate them here
-		if (HasCompleteSubtree && IsSubtreeSameQuadMesh)
+		if (HasCompleteSubtree && IsSubtreeSameQuadtreeMesh)
 		{
 			FNode ChildNode;
 			const FVector HalfBoundSize(Extent.X, Extent.Y, Extent.Z*2.0f);
@@ -431,9 +431,9 @@ void FMeshQuadTree::FNode::SelectLODWithinBounds(const FNodeData& InNodeData, in
 
 				// Create a temporary node to traverse
 				ChildNode.HasCompleteSubtree = 1;
-				ChildNode.IsSubtreeSameQuadMesh = 1;
-				ChildNode.TransitionQuadMeshIndex = TransitionQuadMeshIndex;
-				ChildNode.QuadMeshIndex = QuadMeshIndex;
+				ChildNode.IsSubtreeSameQuadtreeMesh = 1;
+				ChildNode.TransitionQuadtreeMeshIndex = TransitionQuadtreeMeshIndex;
+				ChildNode.QuadtreeMeshIndex = QuadtreeMeshIndex;
 				ChildNode.Bounds = ChildBounds;
 
 				ChildNode.SelectLODWithinBounds(InNodeData, InLODLevel - 1, InTraversalDesc, Output);
@@ -457,10 +457,10 @@ bool FMeshQuadTree::FNode::QueryBaseHeightAtLocation(const FNodeData& InNodeData
 	// Early out if subtree is complete and of same waterbody. 
 	// Note: Since we prune the quadtree of anything below this condition, it means there are no more granular nodes to fetch below this. In theory we could skip the pruning and have slightly more accurate height sampling, since rivers might have leaf nodes with individual bounds.
 	// Same condition as leaf nodes
-	if (HasCompleteSubtree && IsSubtreeSameQuadMesh)
+	if (HasCompleteSubtree && IsSubtreeSameQuadtreeMesh)
 	{
 		// Return "accurate" base height when there's a valid sample
-		OutHeight = InNodeData.QuadMeshRenderData[QuadMeshIndex].SurfaceBaseHeight;
+		OutHeight = InNodeData.QuadtreeMeshRenderData[QuadtreeMeshIndex].SurfaceBaseHeight;
 		
 		return true;
 	}
@@ -482,7 +482,7 @@ bool FMeshQuadTree::FNode::QueryBaseHeightAtLocation(const FNodeData& InNodeData
 	}
 
 	// Return regular base height when there's not valid sample
-	OutHeight = InNodeData.QuadMeshRenderData[QuadMeshIndex].SurfaceBaseHeight;
+	OutHeight = InNodeData.QuadtreeMeshRenderData[QuadtreeMeshIndex].SurfaceBaseHeight;
 
 	// Point is not in any of these children, return false
 	return false;
@@ -514,25 +514,25 @@ bool FMeshQuadTree::FNode::QueryBoundsAtLocation(const FNodeData& InNodeData, co
 	return ChildCount == 0;
 }
 
-void FMeshQuadTree::FNode::AddNodes(FNodeData& InNodeData, const FBox& InMeshBounds, const FBox& InQuadMeshBounds,
-                                    uint32 InQuadMeshIndex, int32 InLODLevel, uint32 InParentIndex)
+void FMeshQuadTree::FNode::AddNodes(FNodeData& InNodeData, const FBox& InMeshBounds, const FBox& InQuadtreeMeshBounds,
+                                    uint32 InQuadtreeMeshIndex, int32 InLODLevel, uint32 InParentIndex)
 {
 	// Update the bounds
-	Bounds.Max.Z = FMath::Max(Bounds.Max.Z, InQuadMeshBounds.Max.Z);
-	Bounds.Min.Z = FMath::Min(Bounds.Min.Z, InQuadMeshBounds.Min.Z);
+	Bounds.Max.Z = FMath::Max(Bounds.Max.Z, InQuadtreeMeshBounds.Max.Z);
+	Bounds.Min.Z = FMath::Min(Bounds.Min.Z, InQuadtreeMeshBounds.Min.Z);
 
-	TransitionQuadMeshIndex = static_cast<uint16>(InQuadMeshIndex);
+	TransitionQuadtreeMeshIndex = static_cast<uint16>(InQuadtreeMeshIndex);
 	
 
 	// Assign the render data here (based on priority)
-	QuadMeshIndex = InQuadMeshIndex;
+	QuadtreeMeshIndex = InQuadtreeMeshIndex;
 	// Cache whether or not this node has a material
-	HasMaterial = InNodeData.QuadMeshRenderData[QuadMeshIndex].Material != nullptr;
+	HasMaterial = InNodeData.QuadtreeMeshRenderData[QuadtreeMeshIndex].Material != nullptr;
 	
 
 	// Reset the flags before going through the children. These flags will be turned off by recursion if the state changes
 	// Setting them here ensures leaf nodes are marked as complete subtrees, allowing them to be further implicitly subdivided
-	IsSubtreeSameQuadMesh = 1;
+	IsSubtreeSameQuadtreeMesh = 1;
 	HasCompleteSubtree = 1;
 
 	// This is a leaf node, stop here
@@ -549,26 +549,26 @@ void FMeshQuadTree::FNode::AddNodes(FNodeData& InNodeData, const FBox& InMeshBou
 	{
 		if (Children[i] > 0)
 		{
-			if (InNodeData.Nodes[Children[i]].Bounds.IntersectXY(InQuadMeshBounds))
+			if (InNodeData.Nodes[Children[i]].Bounds.IntersectXY(InQuadtreeMeshBounds))
 			{
-				InNodeData.Nodes[Children[i]].AddNodes(InNodeData, InMeshBounds, InQuadMeshBounds, InQuadMeshIndex, InLODLevel - 1, Children[i]);
+				InNodeData.Nodes[Children[i]].AddNodes(InNodeData, InMeshBounds, InQuadtreeMeshBounds, InQuadtreeMeshIndex, InLODLevel - 1, Children[i]);
 			}
 		}
 		else
 		{
 			// Check if this child needs to be created. If yes, initialize it with the depth bounds of InBounds
-			const FVector ChildMin(FVector2D(Bounds.Min) + HalfBoundSize * HalfOffsets[i], InQuadMeshBounds.Min.Z);
-			const FVector ChildMax(FVector2D(ChildMin) + HalfBoundSize, InQuadMeshBounds.Max.Z);
+			const FVector ChildMin(FVector2D(Bounds.Min) + HalfBoundSize * HalfOffsets[i], InQuadtreeMeshBounds.Min.Z);
+			const FVector ChildMax(FVector2D(ChildMin) + HalfBoundSize, InQuadtreeMeshBounds.Max.Z);
 			const FBox ChildBounds(ChildMin, ChildMax);
 
-			if (ChildBounds.IntersectXY(InQuadMeshBounds) && ChildBounds.IntersectXY(InMeshBounds))
+			if (ChildBounds.IntersectXY(InQuadtreeMeshBounds) && ChildBounds.IntersectXY(InMeshBounds))
 			{
 				// All nodes have been allocated upfront, no reallocation should occur : 
 				check(InNodeData.Nodes.Num() < InNodeData.Nodes.Max());
 				Children[i] = InNodeData.Nodes.Emplace();
 				InNodeData.Nodes[Children[i]].Bounds = ChildBounds; 
 				InNodeData.Nodes[Children[i]].ParentIndex = InParentIndex;
-				InNodeData.Nodes[Children[i]].AddNodes(InNodeData, InMeshBounds, InQuadMeshBounds, InQuadMeshIndex, InLODLevel - 1, Children[i]);
+				InNodeData.Nodes[Children[i]].AddNodes(InNodeData, InMeshBounds, InQuadtreeMeshBounds, InQuadtreeMeshIndex, InLODLevel - 1, Children[i]);
 			}
 		}
 
@@ -580,9 +580,9 @@ void FMeshQuadTree::FNode::AddNodes(FNodeData& InNodeData, const FBox& InMeshBou
 			PrevChildNode = (PrevChildNode.ParentIndex == INVALID_PARENT ? ChildNode : PrevChildNode);
 
 			// If the child doesn't have a subtree with same water bodies, then this node doesn't either
-			if (ChildNode.IsSubtreeSameQuadMesh == 0 || !ChildNode.CanMerge(PrevChildNode))
+			if (ChildNode.IsSubtreeSameQuadtreeMesh == 0 || !ChildNode.CanMerge(PrevChildNode))
 			{
-				IsSubtreeSameQuadMesh = 0;
+				IsSubtreeSameQuadtreeMesh = 0;
 			}
 
 			PrevChildNode = ChildNode;
@@ -601,15 +601,15 @@ void FMeshQuadTree::FNode::AddNodes(FNodeData& InNodeData, const FBox& InMeshBou
 }
 
 void FMeshQuadTree::FNode::AddNodeForRender(const FNodeData& InNodeData,
-	const FQuadMeshRenderData& InQuadMeshRenderData, int32 InDensityLevel, int32 InLODLevel,
+	const FQuadtreeMeshRenderData& InQuadtreeMeshRenderData, int32 InDensityLevel, int32 InLODLevel,
 	const FTraversalDesc& InTraversalDesc, FTraversalOutput& Output) const
 {
 	constexpr int32 MaterialIndex = 0;
-	constexpr  uint32 NodeQuadMeshIndex = 2;
+	constexpr  uint32 NodeQuadtreeMeshIndex = 2;
 	
 
 	// The base height of this tile comes either the top of the bounding box (for rivers) or the given base height (lakes and ocean)
-	const double BaseHeight = InQuadMeshRenderData.SurfaceBaseHeight;
+	const double BaseHeight = InQuadtreeMeshRenderData.SurfaceBaseHeight;
 
 	const float BaseHeightTWS = BaseHeight + InTraversalDesc.PreViewTranslation.Z;
 
@@ -628,7 +628,7 @@ void FMeshQuadTree::FNode::AddNodeForRender(const FNodeData& InNodeData,
 	StagingData.Data[0].Y = TranslatedWorldPosition.Y;
 	StagingData.Data[0].Z = BaseHeightTWS;
 	//StagingData.Data[0].W = *(float*)&NodeWaterBodyIndex;
-	StagingData.Data[0].W = std::bit_cast<float>(NodeQuadMeshIndex);
+	StagingData.Data[0].W = std::bit_cast<float>(NodeQuadtreeMeshIndex);
 
 	// Lowest LOD isn't always 0, this increases with the height distance 
 	const bool bIsLowestLOD = (InLODLevel == InTraversalDesc.LowestLOD);
@@ -648,13 +648,13 @@ void FMeshQuadTree::FNode::AddNodeForRender(const FNodeData& InNodeData,
 	StagingData.Data[1].Z = Scale.X;
 	StagingData.Data[1].W = Scale.Y;
 
-#if WITH_QUADMESH_SELECTION_SUPPORT
+#if WITH_QUADTREEMESH_SELECTION_SUPPORT
 	// Instance Hit Proxy ID
-	const FLinearColor HitProxyColor = InQuadMeshRenderData.HitProxy->Id.GetColor().ReinterpretAsLinear();
+	const FLinearColor HitProxyColor = InQuadtreeMeshRenderData.HitProxy->Id.GetColor().ReinterpretAsLinear();
 	StagingData.Data[2].X = HitProxyColor.R;
 	StagingData.Data[2].Y = HitProxyColor.G;
 	StagingData.Data[2].Z = HitProxyColor.B;
-	StagingData.Data[2].W = InQuadMeshRenderData.bQuadMeshSelected ? 1.0f : 0.0f;
+	StagingData.Data[2].W = InQuadtreeMeshRenderData.bQuadtreeMeshSelected ? 1.0f : 0.0f;
 #endif 
 
 	++Output.InstanceCount;
@@ -668,8 +668,8 @@ void FMeshQuadTree::FNode::AddNodeForRender(const FNodeData& InNodeData,
 		if (InTraversalDesc.DebugShowTile == 1)
 		{
 			constexpr  int32 TileDebugID = 2;
-			static FColor QuadMeshTypeColor[] = { FColor::Red, FColor::Green, FColor::Blue, FColor::Yellow, FColor::Purple };
-			Color = QuadMeshTypeColor[TileDebugID];
+			static FColor QuadtreeMeshTypeColor[] = { FColor::Red, FColor::Green, FColor::Blue, FColor::Yellow, FColor::Purple };
+			Color = QuadtreeMeshTypeColor[TileDebugID];
 		}
 		else if (InTraversalDesc.DebugShowTile == 2)
 		{

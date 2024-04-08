@@ -6,26 +6,26 @@ class FMaterialRenderProxy;
 class UMaterialInterface;
 class HHitProxy;
 
-struct FQuadMeshRenderData
+struct FQuadtreeMeshRenderData
 {
 	UMaterialInterface* Material = nullptr;
 	double SurfaceBaseHeight = 0.0;
 	int16 MaterialIndex = INDEX_NONE;
 
-#if WITH_QUADMESH_SELECTION_SUPPORT
-	/** Hit proxy for this quadmesh */
+#if WITH_QUADTREEMESH_SELECTION_SUPPORT
+	/** Hit proxy for this QUADTREEMESH */
 	TRefCountPtr<HHitProxy> HitProxy = nullptr;
 	/** Whether the water body actor is selected or not */
-	bool bQuadMeshSelected = false;
+	bool bQuadtreeMeshSelected = false;
 #endif
 
-	bool operator==(const FQuadMeshRenderData& Other) const
+	bool operator==(const FQuadtreeMeshRenderData& Other) const
 	{
 		return	Material				== Other.Material &&
 				SurfaceBaseHeight		== Other.SurfaceBaseHeight
-#if WITH_QUADMESH_SELECTION_SUPPORT
+#if WITH_QUADTREEMESH_SELECTION_SUPPORT
 				&& HitProxy == Other.HitProxy
-				&& bQuadMeshSelected == Other.bQuadMeshSelected
+				&& bQuadtreeMeshSelected == Other.bQuadtreeMeshSelected
 #endif // WITH_WATER_SELECTION_SUPPORT
 		; 
 	}
@@ -37,7 +37,7 @@ struct FMeshQuadTree
 {
 	enum { INVALID_PARENT = 0xFFFFFFF };
 
-	static constexpr int32 NumStreams = WITH_QUADMESH_SELECTION_SUPPORT ? 3 : 2;
+	static constexpr int32 NumStreams = WITH_QUADTREEMESH_SELECTION_SUPPORT ? 3 : 2;
 
 	struct FStagingInstanceData
 	{
@@ -75,7 +75,7 @@ struct FMeshQuadTree
 		FVector PreViewTranslation = FVector::ZeroVector;
 		FConvexVolume Frustum;
 		bool bLODMorphingEnabled = true;
-		FBox2D TessellatedQuadMeshBounds = FBox2D(ForceInit);
+		FBox2D TessellatedQuadtreeMeshBounds = FBox2D(ForceInit);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 		// Debug
@@ -85,7 +85,7 @@ struct FMeshQuadTree
 	};
 
 
-#if WITH_QUADMESH_SELECTION_SUPPORT
+#if WITH_QUADTREEMESH_SELECTION_SUPPORT
 	/** Obtain all possible hit proxies (proxies of all the water bodies) */
 	void GatherHitProxies(TArray<TRefCountPtr<HHitProxy> >& OutHitProxies) const;
 #endif
@@ -99,9 +99,9 @@ public:
 	/** Unlock to make it read-only. This will optionally prune the node array to remove redundant nodes, nodes that can be implicitly traversed */
 	void Unlock(bool bPruneRedundantNodes);
 	/** Add tiles that intersect InBounds recursively from the root node. Tree must be unlocked. Typically called on Game Thread */
-	void AddQuadMeshTilesInsideBounds(const FBox& InBounds, uint32 InWaterBodyIndex);
+	void AddQuadtreeMeshTilesInsideBounds(const FBox& InBounds, uint32 InWaterBodyIndex);
 	
-	void AddQuadMesh(const TArray<FVector2D>& InPoly, const FBox& InOceanBounds, uint32 InQuadMeshIndex);
+	void AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox& InOceanBounds, uint32 InQuadtreeMeshIndex);
 	/** Assign an index to each material */
 	void BuildMaterialIndices();
 	
@@ -115,7 +115,7 @@ public:
 	bool QueryTileBoundsAtLocation(const FVector2D& InWorldLocationXY, FBox& OutWorldBounds) const;
 
 	/** Add water body render data to this tree. Returns the index in the array. Use this index to add tiles with this water body to the tree, see AddWaterTilesInsideBounds(..) */
-	uint32 AddQuadMeshRenderData(const FQuadMeshRenderData& InQuadMeshRenderData) { return NodeData.QuadMeshRenderData.Add(InQuadMeshRenderData); }
+	uint32 AddQuadtreeMeshRenderData(const FQuadtreeMeshRenderData& InQuadtreeMeshRenderData) { return NodeData.QuadtreeMeshRenderData.Add(InQuadtreeMeshRenderData); }
 
 	/** Get bounds of the root node if there is one, otherwise some default box */
 	FBox GetBounds() const { return NodeData.Nodes.Num() > 0 ? NodeData.Nodes[0].Bounds : FBox(-FVector::OneVector, FVector::OneVector); }
@@ -135,11 +135,11 @@ public:
 	/** Max depth of the tree */
 	int32 GetTreeDepth() const { return TreeDepth; }
 
-	const TArray<FMaterialRenderProxy*>& GetWaterMaterials() const { return QuadMeshMaterials; }
+	const TArray<FMaterialRenderProxy*>& GetWaterMaterials() const { return QuadtreeMeshMaterials; }
 	/** Calculate the world distance to a LOD */
 	static float GetLODDistance(int32 InLODLevel, float InLODScale) { return FMath::Pow(2.0f, static_cast<float>(InLODLevel + 1)) * InLODScale; }
 
-	uint32 GetAllocatedSize() const { return NodeData.GetAllocatedSize() + QuadMeshMaterials.GetAllocatedSize(); }
+	uint32 GetAllocatedSize() const { return NodeData.GetAllocatedSize() + QuadtreeMeshMaterials.GetAllocatedSize(); }
 
 private:
 	
@@ -151,7 +151,7 @@ private:
 	FIntPoint ExtentInTiles = FIntPoint::ZeroValue;
 	FBox2D TileRegion;
 
-	TArray<FMaterialRenderProxy*> QuadMeshMaterials;
+	TArray<FMaterialRenderProxy*> QuadtreeMeshMaterials;
 
 	bool bIsReadOnly = true;
 
@@ -161,13 +161,13 @@ private:
 	struct FNode
 	{
 
-		FNode() : QuadMeshIndex(0), TransitionQuadMeshIndex(0), ParentIndex(INVALID_PARENT), HasCompleteSubtree(1), IsSubtreeSameQuadMesh(1), HasMaterial(0) {}
+		FNode() : QuadtreeMeshIndex(0), TransitionQuadtreeMeshIndex(0), ParentIndex(INVALID_PARENT), HasCompleteSubtree(1), IsSubtreeSameQuadtreeMesh(1), HasMaterial(0) {}
 
 		/** If this node is allowed to be rendered, it means it can be rendered in place of all leaf nodes in its subtree. */
-		bool CanRender(int32 InDensityLevel, int32 InForceCollapseDensityLevel, const FQuadMeshRenderData& InQuadMeshRenderData) const;
+		bool CanRender(int32 InDensityLevel, int32 InForceCollapseDensityLevel, const FQuadtreeMeshRenderData& InQuadtreeMeshRenderData) const;
 
 		/** Add instance for rendering this node*/
-		void AddNodeForRender(const FNodeData& InNodeData, const FQuadMeshRenderData& InQuadMeshRenderData, int32 InDensityLevel, int32 InLODLevel, const FTraversalDesc& InTraversalDesc, FTraversalOutput& Output) const;
+		void AddNodeForRender(const FNodeData& InNodeData, const FQuadtreeMeshRenderData& InQuadtreeMeshRenderData, int32 InDensityLevel, int32 InLODLevel, const FTraversalDesc& InTraversalDesc, FTraversalOutput& Output) const;
 
 		/** Recursive function to traverse down to the appropriate density level. The LODLevel is constant here since this function is only called on tiles that are fully inside a LOD range */
 		void SelectLODRefinement(const FNodeData& InNodeData, int32 InDensityLevel, int32 InLODLevel, const FTraversalDesc& InTraversalDesc, FTraversalOutput& Output) const;
@@ -185,19 +185,19 @@ private:
 		bool QueryBoundsAtLocation(const FNodeData& InNodeData, const FVector2D& InWorldLocationXY, FBox& OutBounds) const;
 
 		/** Add nodes that intersect InMeshBounds. LODLevel is the current level. This is the only method used to generate the tree */
-		void AddNodes(FNodeData& InNodeData, const FBox& InMeshBounds, const FBox& InQuadMeshBounds, uint32 InQuadMeshIndex, int32 InLODLevel, uint32 InParentIndex);
+		void AddNodes(FNodeData& InNodeData, const FBox& InMeshBounds, const FBox& InQuadtreeMeshBounds, uint32 InQuadtreeMeshIndex, int32 InLODLevel, uint32 InParentIndex);
 		
 		/** Check if all conditions are met to potentially allow this and another node to render as one */
-		bool CanMerge(const FNode& Other) const { return Other.QuadMeshIndex == QuadMeshIndex && Other.TransitionQuadMeshIndex == TransitionQuadMeshIndex; }
+		bool CanMerge(const FNode& Other) const { return Other.QuadtreeMeshIndex == QuadtreeMeshIndex && Other.TransitionQuadtreeMeshIndex == TransitionQuadtreeMeshIndex; }
 
 		/** World bounds */
 		FBox Bounds = FBox(-FVector::OneVector, FVector::OneVector);
 
 		/** Index into the water body render data array on the tree. If this is not a leaf node, this will represent the waterbody */
-		uint32 QuadMeshIndex : 16;
+		uint32 QuadtreeMeshIndex : 16;
 
 		/** Index to the water body that this tile possibly transitions to */
-		uint32 TransitionQuadMeshIndex : 16;
+		uint32 TransitionQuadtreeMeshIndex : 16;
 
 		/** Index to parent */
 		uint32 ParentIndex : 28;
@@ -206,7 +206,7 @@ private:
 		uint32 HasCompleteSubtree : 1;
 
 		/** If all descendant nodes are from the same waterbody. We can safely collapse this even if HasCompleteSubtree is false */
-		uint32 IsSubtreeSameQuadMesh : 1;
+		uint32 IsSubtreeSameQuadtreeMesh : 1;
 
 		/** Cached value to avoid having to visit this node's FWaterBodyRenderData */
 		uint32 HasMaterial : 1;
@@ -224,10 +224,10 @@ private:
 		TArray<FNode> Nodes;
 
 		/** Render data for all water bodies in this tree, indexed by the nodes */
-		TArray<FQuadMeshRenderData> QuadMeshRenderData;
+		TArray<FQuadtreeMeshRenderData> QuadtreeMeshRenderData;
 
 		/** Total memory dynamically allocated by this object */
-		uint32 GetAllocatedSize() const { return Nodes.GetAllocatedSize() + QuadMeshRenderData.GetAllocatedSize(); }
+		uint32 GetAllocatedSize() const { return Nodes.GetAllocatedSize() + QuadtreeMeshRenderData.GetAllocatedSize(); }
 	} NodeData;
 };
 

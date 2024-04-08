@@ -27,6 +27,10 @@ public class QuadtreeMesh : ModuleRules
 			new string[]
 			{
 				"Core",
+				"CoreUObject",
+				"Engine",
+				"RHI",
+				"GeometryCore",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -39,6 +43,9 @@ public class QuadtreeMesh : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"RenderCore",
+				"InputCore",
+				"Projects"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
@@ -51,10 +58,10 @@ public class QuadtreeMesh : ModuleRules
 			}
 			);
 		
-		bool bWithQuadMeshSelectionSupport = false;
+		bool bWithQuadtreeMeshSelectionSupport = false;
 		if (Target.bBuildEditor)
 		{
-			bWithQuadMeshSelectionSupport = true;
+			bWithQuadtreeMeshSelectionSupport = true;
 
 			PublicDependencyModuleNames.AddRange(
 				new string[] {
@@ -72,7 +79,7 @@ public class QuadtreeMesh : ModuleRules
 			);
 		}
 		// Add a feature define instead of relying on the generic WITH_EDITOR define
-		PublicDefinitions.Add("WITH_QUADMESH_SELECTION_SUPPORT=" + (bWithQuadMeshSelectionSupport ? 1 : 0));
+		PublicDefinitions.Add("WITH_QUADTREEMESH_SELECTION_SUPPORT=" + (bWithQuadtreeMeshSelectionSupport ? 1 : 0));
 	}
 	
 }

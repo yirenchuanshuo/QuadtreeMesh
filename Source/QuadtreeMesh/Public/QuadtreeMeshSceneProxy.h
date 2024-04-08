@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Materials/MaterialInterface.h"
 #include "PrimitiveSceneProxy.h"
+#include "QuadtreeMeshVertexFactory.h"
 #include "Materials/MaterialRelevance.h"
 #include "RayTracingGeometry.h"
 

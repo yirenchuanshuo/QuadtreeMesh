@@ -1,7 +1,6 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-
 #include "CoreMinimal.h"
 #include "Runtime/Engine/Classes/Components/MeshComponent.h"
 #include "MeshQuadTree.h"
@@ -17,7 +16,7 @@ public:
 	// Sets default values for this component's properties
 	UQuadtreeMeshComponent();
 
-	virtual ~UQuadtreeMeshComponent();
+	
 
 	//UObject interface
 	virtual void PostLoad() override;
@@ -38,9 +37,9 @@ public:
 	//INavRelevantInterface interface
 	virtual bool IsNavigationRelevant() const override { return false; }
 
-	const FMeshQuadTree& GetWaterQuadTree() const { return MeshQuadTree; }
+	const FMeshQuadTree& GetMeshQuadTree() const { return MeshQuadTree; }
 
-	void MarkQuadMeshGridDirty() { bNeedsRebuild = true; }
+	void MarkQuadtreeMeshGridDirty() { bNeedsRebuild = true; }
 
 	void Update();
 
@@ -52,7 +51,7 @@ private:
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
 
 	/** Based on all water bodies in the scene, rebuild the water mesh */
-	void RebuildQuadMesh(float InTileSize, const FIntPoint& InExtentInTiles);
+	void RebuildQuadtreeMesh(float InTileSize, const FIntPoint& InExtentInTiles);
 	
 #if WITH_EDITOR
 	
@@ -71,11 +70,11 @@ public:
 	TObjectPtr<UMaterialInterface> MeshDefaultMaterial;
 
 private:
-	/** World size of the quadmesh tiles at LOD0. Multiply this with the ExtentInTiles to get the world extents of the system */
+	/** World size of the QuadtreeMesh tiles at LOD0. Multiply this with the ExtentInTiles to get the world extents of the system */
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "100", AllowPrivateAcces = "true"))
 	float TileSize = 2400.0f;
 
-	/** The extent of the quadmesh in number of tiles. Maximum number of tiles for this system will be ExtentInTiles.X*2*ExtentInTiles.Y*2 */
+	/** The extent of the QuadtreeMesh in number of tiles. Maximum number of tiles for this system will be ExtentInTiles.X*2*ExtentInTiles.Y*2 */
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "1", AllowPrivateAcces = "true"))
 	FIntPoint ExtentInTiles = FIntPoint(64, 64);
 	
