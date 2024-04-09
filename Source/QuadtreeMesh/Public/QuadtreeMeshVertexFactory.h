@@ -35,6 +35,8 @@ public:
 			IndexBufferRHI = CreateIndexBuffer<uint32>(RHICmdList);
 		}
 	}
+
+	int32 GetIndexCount() const { return NumIndices; };
 	
 private:
 	
@@ -190,7 +192,7 @@ private:
 };
 
 
-extern const FVertexFactoryType* GetQuadtreeMeshVertexFactoryType(bool bWithWaterSelectionSupport);
+extern const FVertexFactoryType* GetQuadtreeMeshVertexFactoryType(bool bWithQuadtreeMeshSelectionSupport);
 
 template <bool bWithQuadtreeMeshSelectionSupport>
 struct TQuadtreeMeshUserData
@@ -209,6 +211,33 @@ struct TQuadtreeMeshUserData
 #if RHI_RAYTRACING	
 	FUniformBufferRHIRef QuadtreeMeshVertexFactoryRaytracingVFUniformBuffer = nullptr;
 #endif
+};
+
+template <bool bWithQuadtreeMeshSelectionSupport>
+struct TQuadtreeMeshUserDataBuffers
+{
+	using QuadtreeMeshUserDataType = TQuadtreeMeshUserData<bWithQuadtreeMeshSelectionSupport>;
+
+	TQuadtreeMeshUserDataBuffers(const TQuadtreeMeshInstanceDataBuffers<bWithQuadtreeMeshSelectionSupport>* InInstanceDataBuffers)
+	{
+		int32 Index = 0;
+		UserData[Index++] = MakeUnique<QuadtreeMeshUserDataType>(EQuadtreeMeshRenderGroupType::RG_RenderQuadtreeMeshTiles, InInstanceDataBuffers);
+
+#if WITH_QUADTREEMESH_SELECTION_SUPPORT
+		if (bWithQuadtreeMeshSelectionSupport)
+		{
+			UserData[Index++] = MakeUnique<QuadtreeMeshUserDataType>(EQuadtreeMeshRenderGroupType::RG_RenderSelectedQuadtreeMeshTilesOnly, InInstanceDataBuffers);
+			UserData[Index++] = MakeUnique<QuadtreeMeshUserDataType>(EQuadtreeMeshRenderGroupType::RG_RenderUnselectedQuadtreeMeshTilesOnly, InInstanceDataBuffers);
+		}
+#endif
+	}
+
+	const QuadtreeMeshUserDataType* GetUserData(EQuadtreeMeshRenderGroupType InRenderGroupType)
+	{
+		return UserData[static_cast<int32>(InRenderGroupType)].Get();
+	}
+
+	TStaticArray<TUniquePtr<QuadtreeMeshUserDataType>, TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::NumRenderGroups> UserData;
 };
 
 #include "QuadtreeMeshVertexFactory.inl"

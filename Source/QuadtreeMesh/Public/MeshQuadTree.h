@@ -104,6 +104,8 @@ public:
 	void AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox& InOceanBounds, uint32 InQuadtreeMeshIndex);
 	/** Assign an index to each material */
 	void BuildMaterialIndices();
+
+	void BuildQuadtreeMeshTileInstanceData(const FTraversalDesc& InTraversalDesc, FTraversalOutput& Output) const;
 	
 	/** Bilinear interpolation between four neighboring base height samples around InWorldLocationXY. The samples are done on the leaf node grid resolution. Returns true if all 4 samples were taken in valid nodes */
 	bool QueryInterpolatedTileBaseHeightAtLocation(const FVector2D& InWorldLocationXY, float& OutHeight) const;
@@ -135,7 +137,7 @@ public:
 	/** Max depth of the tree */
 	int32 GetTreeDepth() const { return TreeDepth; }
 
-	const TArray<FMaterialRenderProxy*>& GetWaterMaterials() const { return QuadtreeMeshMaterials; }
+	const TArray<FMaterialRenderProxy*>& GetQuadtreeMeshMaterials() const { return QuadtreeMeshMaterials; }
 	/** Calculate the world distance to a LOD */
 	static float GetLODDistance(int32 InLODLevel, float InLODScale) { return FMath::Pow(2.0f, static_cast<float>(InLODLevel + 1)) * InLODScale; }
 

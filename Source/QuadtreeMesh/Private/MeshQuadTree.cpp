@@ -184,6 +184,21 @@ void FMeshQuadTree::BuildMaterialIndices()
 	}
 }
 
+void FMeshQuadTree::BuildQuadtreeMeshTileInstanceData(const FTraversalDesc& InTraversalDesc,
+	FTraversalOutput& Output) const
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(BuildQuadtreeMeshTileInstanceData);
+	check(bIsReadOnly);
+	if (InTraversalDesc.TessellatedQuadtreeMeshBounds.bIsValid)
+	{
+		NodeData.Nodes[0].SelectLODWithinBounds(NodeData, TreeDepth, InTraversalDesc, Output);
+	}
+	else
+	{
+		NodeData.Nodes[0].SelectLOD(NodeData, TreeDepth, InTraversalDesc, Output);
+	}
+}
+
 bool FMeshQuadTree::QueryInterpolatedTileBaseHeightAtLocation(const FVector2D& InWorldLocationXY,float& OutHeight) const
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(FWaterQuadTree::QueryInterpolatedTileBaseHeightAtLocation);

@@ -73,13 +73,13 @@ public:
 // ----------------------------------------------------------------------------------
 
 // Always implement the basic vertex factory so that it's there for both editor and non-editor builds :
-/*IMPLEMENT_TEMPLATE_TYPE_LAYOUT(template<>, TQuadtreeMeshVertexFactoryShaderParameters</*bWithQuadtreeMeshSelectionSupport = #1# false>);
-IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# false>, SF_Vertex, TQuadtreeMeshVertexFactoryShaderParameters</*bWithWaterSelectionSupport = #1# false>);
+IMPLEMENT_TEMPLATE_TYPE_LAYOUT(template<>, TQuadtreeMeshVertexFactoryShaderParameters<false>);
+IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory<false>, SF_Vertex, TQuadtreeMeshVertexFactoryShaderParameters<false>);
 #if RHI_RAYTRACING
-IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# false>, SF_Compute, TQuadtreeMeshVertexFactoryShaderParameters</*bWithWaterSelectionSupport = #1# false>);
-IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# false>, SF_RayHitGroup, TQuadtreeMeshVertexFactoryShaderParameters</*bWithWaterSelectionSupport = #1# false>);
+IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory<false>, SF_Compute, TQuadtreeMeshVertexFactoryShaderParameters<false>);
+IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory<false>, SF_RayHitGroup, TQuadtreeMeshVertexFactoryShaderParameters<false>);
 #endif
-IMPLEMENT_TEMPLATE_VERTEX_FACTORY_TYPE(template<>, TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# false>, "/Plugin/QuadtreeMesh/Private/QuadtreeMeshVertexFactory.ush",
+IMPLEMENT_TEMPLATE_VERTEX_FACTORY_TYPE(template<>, TQuadtreeMeshVertexFactory<false>, "/Plugin/QuadtreeMesh/Private/QuadtreeMeshVertexFactory.ush",
 	  EVertexFactoryFlags::UsedWithMaterials
 	| EVertexFactoryFlags::SupportsDynamicLighting
 	| EVertexFactoryFlags::SupportsPrecisePrevWorldPos
@@ -91,13 +91,13 @@ IMPLEMENT_TEMPLATE_VERTEX_FACTORY_TYPE(template<>, TQuadtreeMeshVertexFactory</*
 
 #if WITH_QUADTREEMESH_SELECTION_SUPPORT
 // In editor builds, also implement the vertex factory that supports water selection:
-IMPLEMENT_TEMPLATE_TYPE_LAYOUT(template<>, TQuadtreeMeshVertexFactoryShaderParameters</*bWithQuadtreeMeshSelectionSupport = #1# true>);
-IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# true>, SF_Vertex, TQuadtreeMeshVertexFactoryShaderParameters</*bWithQuadtreeMeshSelectionSupport = #1# true>);
+IMPLEMENT_TEMPLATE_TYPE_LAYOUT(template<>, TQuadtreeMeshVertexFactoryShaderParameters<true>);
+IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory<true>, SF_Vertex, TQuadtreeMeshVertexFactoryShaderParameters<true>);
 #if RHI_RAYTRACING
-IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# true>, SF_Compute, TQuadtreeMeshVertexFactoryShaderParameters</*bWithQuadtreeMeshSelectionSupport = #1# true>);
-IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# true>, SF_RayHitGroup, TQuadtreeMeshVertexFactoryShaderParameters</*bWithQuadtreeMeshSelectionSupport = #1# true>);
+IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory<true>, SF_Compute, TQuadtreeMeshVertexFactoryShaderParameters<true>);
+IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(TQuadtreeMeshVertexFactory<true>, SF_RayHitGroup, TQuadtreeMeshVertexFactoryShaderParameters<true>);
 #endif
-IMPLEMENT_TEMPLATE_VERTEX_FACTORY_TYPE(template<>, TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# true>, "/Plugin/QuadtreeMesh/Private/QuadtreeMeshVertexFactory.ush",
+IMPLEMENT_TEMPLATE_VERTEX_FACTORY_TYPE(template<>, TQuadtreeMeshVertexFactory<true>, "/Plugin/QuadtreeMesh/Private/QuadtreeMeshVertexFactory.ush",
 	  EVertexFactoryFlags::UsedWithMaterials
 	| EVertexFactoryFlags::SupportsDynamicLighting
 	| EVertexFactoryFlags::SupportsPrecisePrevWorldPos
@@ -115,15 +115,15 @@ const FVertexFactoryType* GetQuadtreeMeshVertexFactoryType(bool bWithQuadtreeMes
 #if WITH_QUADTREEMESH_SELECTION_SUPPORT
 	if (bWithQuadtreeMeshSelectionSupport)
 	{
-		return &TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# true>::StaticType;
+		return &TQuadtreeMeshVertexFactory<true>::StaticType;
 	}
 	else
 #endif
 	{
 		check(!bWithQuadtreeMeshSelectionSupport);
-		return &TQuadtreeMeshVertexFactory</*bWithQuadtreeMeshSelectionSupport = #1# false>::StaticType;
+		return &TQuadtreeMeshVertexFactory<false>::StaticType;
 	}
-}*/
+}
 
 
 

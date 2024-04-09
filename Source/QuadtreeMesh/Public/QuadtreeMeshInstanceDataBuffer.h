@@ -9,7 +9,7 @@ public:
 	static constexpr int32 NumBuffers = bWithQuadtreeMeshSelectionSupport ? 3 : 2;
 	TQuadtreeMeshInstanceDataBuffers(int32 InInstanceCount)
 	{
-		ENQUEUE_RENDER_COMMAND(AllocateQuadtreeMeshInstanceDataBuffer);
+		ENQUEUE_RENDER_COMMAND(AllocateQuadtreeMeshInstanceDataBuffer)
 		(
 			[this, InInstanceCount](FRHICommandListImmediate& RHICmdList)
 			{

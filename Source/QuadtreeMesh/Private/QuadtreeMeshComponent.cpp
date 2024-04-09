@@ -21,7 +21,7 @@ UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 		// Find Textures
 		ConstructorHelpers::FObjectFinder<UMaterialInterface> DefautMaterial;
 		FConstructorStatics()
-			: DefautMaterial(TEXT("MaterialInterface'/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial'"))
+			: DefautMaterial(TEXT("MaterialInterface'DefaultMaterialName'"))
 		{
 		}
 	};
@@ -80,7 +80,18 @@ void UQuadtreeMeshComponent::CollectPSOPrecacheData(const FPSOPrecacheParams& Ba
 	FComponentPSOPrecacheParamsList& OutParams)
 {
 	const FVertexFactoryType* QuadtreeMeshVertexFactoryType = nullptr;
-	Super::CollectPSOPrecacheData(BasePrecachePSOParams, OutParams);
+	for (UMaterialInterface* MaterialInterface : OverrideMaterials)
+	{
+		if (MaterialInterface)
+		{
+			FComponentPSOPrecacheParams& ComponentParams = OutParams[OutParams.AddDefaulted()];
+			ComponentParams.Priority = EPSOPrecachePriority::High;
+			ComponentParams.MaterialInterface = MaterialInterface;
+			ComponentParams.VertexFactoryDataList.Add(FPSOPrecacheVertexFactoryData(QuadtreeMeshVertexFactoryType));
+			ComponentParams.PSOPrecacheParams = BasePrecachePSOParams;
+		}
+	}
+	
 }
 
 
@@ -92,6 +103,16 @@ void UQuadtreeMeshComponent::Update()
 		PrecachePSOs();
 		bNeedsRebuild = false;
 	}
+}
+
+FMaterialRelevance UQuadtreeMeshComponent::GetWaterMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const
+{
+	FMaterialRelevance Result;
+	for (UMaterialInterface* Mat : OverrideMaterials)
+	{
+		Result |= Mat->GetRelevance_Concurrent(InFeatureLevel);
+	}
+	return Result;
 }
 
 FBoxSphereBounds UQuadtreeMeshComponent::CalcBounds(const FTransform& LocalToWorld) const
@@ -150,7 +171,8 @@ void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 	const FName PropertyName = PropertyChangedEvent.Property->GetFName();
 
 	// 检查是否是我们关心的 OverrideMaterials 属性
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(UMeshComponent, OverrideMaterials))
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UMeshComponent, OverrideMaterials)
+		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ForceCollapseDensityLevel))
 	{
 		// 如果 OverrideMaterials 为空，那么我们就初始化一个空的材质数组
 		if (OverrideMaterials.IsEmpty())

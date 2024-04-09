@@ -43,7 +43,11 @@ public:
 
 	void Update();
 
-protected:
+	FMaterialRelevance GetWaterMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const;
+
+	float GetLODScale() const { return LODScale; }
+
+	int32 GetTessellationFactor() const { return FMath::Clamp(TessellationFactor, 1, 12); }
 
 
 private:
@@ -66,8 +70,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "1", ClampMax = "12"))
 	int32 TessellationFactor = 6;
 
+	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "-1"))
+	int32 ForceCollapseDensityLevel = -1;
+
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> MeshDefaultMaterial;
+
+	
 
 private:
 	/** World size of the QuadtreeMesh tiles at LOD0. Multiply this with the ExtentInTiles to get the world extents of the system */
@@ -77,6 +86,9 @@ private:
 	/** The extent of the QuadtreeMesh in number of tiles. Maximum number of tiles for this system will be ExtentInTiles.X*2*ExtentInTiles.Y*2 */
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "1", AllowPrivateAcces = "true"))
 	FIntPoint ExtentInTiles = FIntPoint(64, 64);
+
+	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "0.5"))
+	float LODScale = 1.0f;
 	
 	FMeshQuadTree MeshQuadTree;
 
