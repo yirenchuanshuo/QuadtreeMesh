@@ -58,11 +58,9 @@ public class QuadtreeMesh : ModuleRules
 			}
 			);
 		
-		bool bWithQuadtreeMeshSelectionSupport = false;
+		
 		if (Target.bBuildEditor)
 		{
-			bWithQuadtreeMeshSelectionSupport = true;
-
 			PublicDependencyModuleNames.AddRange(
 				new string[] {
 					"MeshDescription"
@@ -78,8 +76,6 @@ public class QuadtreeMesh : ModuleRules
 				}
 			);
 		}
-		// Add a feature define instead of relying on the generic WITH_EDITOR define
-		PublicDefinitions.Add("WITH_QUADTREEMESH_SELECTION_SUPPORT=" + (bWithQuadtreeMeshSelectionSupport ? 1 : 0));
 	}
 	
 }

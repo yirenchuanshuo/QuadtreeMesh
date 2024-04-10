@@ -663,14 +663,14 @@ void FMeshQuadTree::FNode::AddNodeForRender(const FNodeData& InNodeData,
 	StagingData.Data[1].Z = Scale.X;
 	StagingData.Data[1].W = Scale.Y;
 
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT
+
 	// Instance Hit Proxy ID
 	const FLinearColor HitProxyColor = InQuadtreeMeshRenderData.HitProxy->Id.GetColor().ReinterpretAsLinear();
 	StagingData.Data[2].X = HitProxyColor.R;
 	StagingData.Data[2].Y = HitProxyColor.G;
 	StagingData.Data[2].Z = HitProxyColor.B;
 	StagingData.Data[2].W = InQuadtreeMeshRenderData.bQuadtreeMeshSelected ? 1.0f : 0.0f;
-#endif 
+
 
 	++Output.InstanceCount;
 

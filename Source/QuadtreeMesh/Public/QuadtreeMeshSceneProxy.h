@@ -29,10 +29,6 @@ public:
 	virtual FPrimitiveViewRelevance GetViewRelevance(const FSceneView* View) const override;
 	
 
-	using QuadtreeMeshVertexFactoryType = TQuadtreeMeshVertexFactory<WITH_QUADTREEMESH_SELECTION_SUPPORT>;
-	using QuadtreeMeshInstanceDataBuffersType = TQuadtreeMeshInstanceDataBuffers<WITH_QUADTREEMESH_SELECTION_SUPPORT>;
-	using QuadtreeMeshUserDataBuffersType = TQuadtreeMeshUserDataBuffers<WITH_QUADTREEMESH_SELECTION_SUPPORT>;
-	
 
 private:
 	struct FQuadtreeMeshLODParams
@@ -60,16 +56,16 @@ private:
 	FMaterialRelevance MaterialRelevance;
 
 	// One vertex factory per LOD
-	TArray<QuadtreeMeshVertexFactoryType*> QuadtreeMeshVertexFactories;
+	TArray<FQuadtreeMeshVertexFactory*> QuadtreeMeshVertexFactories;
 
 	/** Tiles containing water, stored in a quad tree */
 	FMeshQuadTree MeshQuadTree;
 
 	/** Unique Instance data buffer shared accross water batch draw calls */	
-	QuadtreeMeshInstanceDataBuffersType* QuadtreeMeshInstanceDataBuffers;
+	FQuadtreeMeshInstanceDataBuffers* QuadtreeMeshInstanceDataBuffers;
 
 	/** Per-"water render group" user data (the number of groups might vary depending on whether we're in the editor or not) */
-	QuadtreeMeshUserDataBuffersType* QuadtreeMeshUserDataBuffers;
+	FQuadtreeMeshUserDataBuffers* QuadtreeMeshUserDataBuffers;
 
 	FBox2D TessellatedQuadtreeMeshBounds = FBox2D(ForceInit);
 
@@ -80,6 +76,7 @@ private:
 	int32 DensityCount = 0;
 
 	mutable int32 HistoricalMaxViewInstanceCount = 0;
+
 
 #if RHI_RAYTRACING
 	// Per density array of ray tracing geometries.

@@ -7,7 +7,7 @@ struct FVertexFactoryInput
 
 	float4 InstanceData0 : ATTRIBUTE8;
 	float4 InstanceData1 : ATTRIBUTE9; 
-#if HIT_PROXY_SHADER || WITH_QUADMESH_SELECTION_SUPPORT_VF
+#if HIT_PROXY_SHADER
 	float4 InstanceData2 : ATTRIBUTE10; // Store an HitProxyID per instance
 #endif
 
@@ -192,7 +192,7 @@ FVertexFactoryIntermediates GetVertexFactoryIntermediates(FVertexFactoryInput In
 		Intermediates.MorphedTranslatedWorldPos = TranslatedWorldPosition;
 	}
 
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT_VF
+#if HIT_PROXY_SHADER
 	float SelectedValue = Input.InstanceData2.w;
 	float IsVisible = QuadtreeMeshVF.bRenderSelected * SelectedValue + QuadtreeMeshVF.bRenderUnselected * (1-SelectedValue);
 	Intermediates.MorphedTranslatedWorldPos *= IsVisible;
@@ -206,11 +206,7 @@ FVertexFactoryIntermediates GetVertexFactoryIntermediates(FVertexFactoryInput In
 #if HIT_PROXY_SHADER
 float4 VertexFactoryGetInstanceHitProxyId(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
 {
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT_VF
-	return float4(Input.InstanceData2.rgb, 0);
-#else 
 	return 0;
-#endif 
 }
 #endif
 
@@ -244,7 +240,7 @@ FMaterialVertexParameters GetMaterialVertexParameters(FVertexFactoryInput Input,
     
 	Result.SceneData = Intermediates.SceneData; 
 	Result.WorldPosition = WorldPosition;
-	Result.TangentToWorld = mul(TangentToLocal,GetLocalToWorld3x3(ResolvedView.WorldToView));
+	Result.TangentToWorld = mul(TangentToLocal,GetLocalToWorld3x3());
 	Result.PreSkinnedPosition = Input.Position.xyz;
 	Result.PreSkinnedNormal = TangentToLocal[2];
 
@@ -262,6 +258,11 @@ FMaterialVertexParameters GetMaterialVertexParameters(FVertexFactoryInput Input,
 #endif
 
 	return Result;
+}
+
+half3x3 VertexFactoryGetTangentToLocal( FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates )
+{
+	return half3x3(1,0,0,0,1,0,0,0,1);
 }
 
 float4 VertexFactoryGetWorldPosition(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
@@ -349,10 +350,9 @@ FVertexFactoryInput LoadVertexFactoryInputForHGS(uint TriangleIndex, int VertexI
 
 	Input.InstanceData0 = QuadtreeMeshRaytracingVF.InstanceData0;
 	Input.InstanceData1 = QuadtreeMeshRaytracingVF.InstanceData1;
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT_VF
+#if HIT_PROXY_SHADER
 	Input.InstanceData2 = 0.0f;
 #endif
-
 	VF_GPUSCENE_SET_INPUT_FOR_RT(Input, GetInstanceUserData(), 0U);
 
 	return Input;
@@ -373,7 +373,8 @@ FVertexFactoryInput LoadVertexFactoryInputForDynamicUpdate(uint TriangleIndex, i
 
 	Input.InstanceData0 = QuadtreeMeshRaytracingVF.InstanceData0;
 	Input.InstanceData1 = QuadtreeMeshRaytracingVF.InstanceData1;
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT_VF
+
+#if HIT_PROXY_SHADER
 	Input.InstanceData2 = 0.0f;
 #endif
 	
@@ -426,5 +427,7 @@ FVertexFactoryRayTracingInterpolants VertexFactoryInterpolate(FVertexFactoryRayT
 	return O;
 }
 #endif
+
+#include "/Engine/Private/VertexFactoryDefaultInterface.ush"
 
 

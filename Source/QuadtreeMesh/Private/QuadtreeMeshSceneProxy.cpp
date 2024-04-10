@@ -5,7 +5,6 @@
 
 
 DECLARE_STATS_GROUP(TEXT("Quadtree Mesh"), STATGROUP_QuadtreeMesh, STATCAT_Advanced);
-
 DECLARE_DWORD_COUNTER_STAT(TEXT("Tiles Drawn"), STAT_QuadtreeMeshTilesDrawn, STATGROUP_QuadtreeMesh);
 DECLARE_DWORD_COUNTER_STAT(TEXT("Draw Calls"), STAT_QuadtreeMeshDrawCalls, STATGROUP_QuadtreeMesh);
 DECLARE_DWORD_COUNTER_STAT(TEXT("Vertices Drawn"), STAT_QuadtreeMeshVerticesDrawn, STATGROUP_QuadtreeMesh);
@@ -37,7 +36,7 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Compone
 	QuadtreeMeshVertexFactories.Reserve(MeshQuadTree.GetTreeDepth());
 	for (uint8 i = 0; i < MeshQuadTree.GetTreeDepth(); i++)
 	{
-		QuadtreeMeshVertexFactories.Add(new QuadtreeMeshVertexFactoryType(GetScene().GetFeatureLevel(), NumQuads, LODScale));
+		QuadtreeMeshVertexFactories.Add(new FQuadtreeMeshVertexFactory(GetScene().GetFeatureLevel(), NumQuads, LODScale));
 		BeginInitResource(QuadtreeMeshVertexFactories.Last());
 
 		NumQuads /= 2;
@@ -52,9 +51,9 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Compone
 	DensityCount = QuadtreeMeshVertexFactories.Num();
 
 	const int32 TotalLeafNodes = MeshQuadTree.GetMaxLeafCount();
-	QuadtreeMeshInstanceDataBuffers = new QuadtreeMeshInstanceDataBuffersType(TotalLeafNodes);
+	QuadtreeMeshInstanceDataBuffers = new FQuadtreeMeshInstanceDataBuffers(TotalLeafNodes);
 
-	QuadtreeMeshUserDataBuffers = new QuadtreeMeshUserDataBuffersType(QuadtreeMeshInstanceDataBuffers);
+	QuadtreeMeshUserDataBuffers = new FQuadtreeMeshUserDataBuffers(QuadtreeMeshInstanceDataBuffers);
 
 	MeshQuadTree.BuildMaterialIndices();
 
@@ -66,7 +65,7 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Compone
 
 FQuadtreeMeshSceneProxy::~FQuadtreeMeshSceneProxy()
 {
-	for (QuadtreeMeshVertexFactoryType* WaterFactory : QuadtreeMeshVertexFactories)
+	for (FQuadtreeMeshVertexFactory* WaterFactory : QuadtreeMeshVertexFactories)
 	{
 		WaterFactory->ReleaseResource();
 		delete WaterFactory;
@@ -96,11 +95,11 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 	FRHICommandListBase& RHICmdList = FRHICommandListImmediate::Get();
 
 	// The water render groups we have to render for this batch : 
-	TArray<EQuadtreeMeshRenderGroupType, TInlineAllocator<QuadtreeMeshVertexFactoryType::NumRenderGroups>> BatchRenderGroups;
+	TArray<EQuadtreeMeshRenderGroupType, TInlineAllocator<FQuadtreeMeshVertexFactory::NumRenderGroups>> BatchRenderGroups;
 	// By default, render all water tiles : 
 	BatchRenderGroups.Add(EQuadtreeMeshRenderGroupType::RG_RenderQuadtreeMeshTiles);
 
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT
+
 	bool bHasSelectedInstances = IsSelected();
 	const bool bSelectionRenderEnabled = GIsEditor && ViewFamily.EngineShowFlags.Selection;
 
@@ -110,7 +109,7 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 		BatchRenderGroups[0] = EQuadtreeMeshRenderGroupType::RG_RenderSelectedQuadtreeMeshTilesOnly;
 		BatchRenderGroups.Add(EQuadtreeMeshRenderGroupType::RG_RenderUnselectedQuadtreeMeshTilesOnly);
 	}
-#endif // WITH_WATER_SELECTION_SUPPORT
+
 
 	if (!HasQuadtreeData())
 	{
@@ -261,10 +260,10 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 						Mesh.bUseForDepthPass = bUseForDepthPass;
 						Mesh.bUseAsOccluder = false;
 
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT
+
 						Mesh.bUseSelectionOutline = (RenderGroup == EQuadtreeMeshRenderGroupType::RG_RenderSelectedQuadtreeMeshTilesOnly);
 						Mesh.bUseWireframeSelectionColoring = (RenderGroup == EQuadtreeMeshRenderGroupType::RG_RenderSelectedQuadtreeMeshTilesOnly);
-#endif // WITH_WATER_SELECTION_SUPPORT
+
 
 						Mesh.Elements.SetNumZeroed(1);
 
@@ -319,7 +318,7 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 				const FMeshQuadTree::FStagingInstanceData& Data = WaterInstanceData.StagingInstanceData[Idx];
 				const int32 WriteIndex = WaterInstanceData.BucketInstanceCounts[Data.BucketIndex]++;
 
-				for (int32 StreamIdx = 0; StreamIdx < QuadtreeMeshInstanceDataBuffersType::NumBuffers; ++StreamIdx)
+				for (int32 StreamIdx = 0; StreamIdx < FQuadtreeMeshInstanceDataBuffers::NumBuffers; ++StreamIdx)
 				{
 					TArrayView<FVector4f> BufferMemory = QuadtreeMeshInstanceDataBuffers->GetBufferMemory(StreamIdx);
 					for (int32 IdxMultipliedInstance = 0; IdxMultipliedInstance < InstanceFactor; ++IdxMultipliedInstance)
@@ -344,7 +343,7 @@ FPrimitiveViewRelevance FQuadtreeMeshSceneProxy::GetViewRelevance(const FSceneVi
 	Result.bDynamicRelevance = true;
 	Result.bStaticRelevance = false;
 	Result.bRenderInMainPass = ShouldRenderInMainPass();
-	Result.bUsesLightingChannels = GetLightingChannelMask() != GetDefaultLightingChannelMask();
+	Result.bUsesLightingChannels = false;
 	Result.bRenderCustomDepth = ShouldRenderCustomDepth();
 	Result.bTranslucentSelfShadow = bCastVolumetricTranslucentShadow;
 	MaterialRelevance.SetPrimitiveViewRelevance(Result);

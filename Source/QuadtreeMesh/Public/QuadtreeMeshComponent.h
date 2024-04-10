@@ -19,7 +19,6 @@ public:
 	
 
 	//UObject interface
-	virtual void PostLoad() override;
 	virtual void PostInitProperties() override;
 
 	//UMeshComponent interface
@@ -75,8 +74,6 @@ public:
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> MeshDefaultMaterial;
-
-	
 
 private:
 	/** World size of the QuadtreeMesh tiles at LOD0. Multiply this with the ExtentInTiles to get the world extents of the system */

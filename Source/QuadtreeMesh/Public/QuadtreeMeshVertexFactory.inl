@@ -8,8 +8,8 @@
 #include "DataDrivenShaderPlatformInfo.h"
 
 // ----------------------------------------------------------------------------------
-template <bool bWithQuadtreeMeshSelectionSupport>
-TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::TQuadtreeMeshVertexFactory(ERHIFeatureLevel::Type InFeatureLevel, int32 InNumQuadsPerSide, float InLODScale)
+
+inline FQuadtreeMeshVertexFactory::FQuadtreeMeshVertexFactory(ERHIFeatureLevel::Type InFeatureLevel, int32 InNumQuadsPerSide, float InLODScale)
 	: FVertexFactory(InFeatureLevel)
 	, NumQuadsPerSide(InNumQuadsPerSide)
 	, LODScale(InLODScale)
@@ -18,24 +18,24 @@ TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::TQuadtreeMeshVert
 	IndexBuffer = new FQuadtreeMeshIndexBuffer(NumQuadsPerSide);
 }
 
-template <bool bWithQuadtreeMeshSelectionSupport>
-TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::~TQuadtreeMeshVertexFactory()
+
+inline FQuadtreeMeshVertexFactory::~FQuadtreeMeshVertexFactory()
 {
 	delete VertexBuffer;
 	delete IndexBuffer;
 }
 
-template <bool bWithQuadtreeMeshSelectionSupport>
-void TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::InitRHI(FRHICommandListBase& RHICmdList)
+
+inline void FQuadtreeMeshVertexFactory::InitRHI(FRHICommandListBase& RHICmdList)
 {
 	Super::InitRHI(RHICmdList);
 
 	// Setup the uniform data:
 	SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType::RG_RenderQuadtreeMeshTiles);
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT
+
 	SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType::RG_RenderSelectedQuadtreeMeshTilesOnly);
 	SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType::RG_RenderUnselectedQuadtreeMeshTilesOnly);
-#endif
+
 
 	VertexBuffer->InitResource(RHICmdList);
 	IndexBuffer->InitResource(RHICmdList);
@@ -71,8 +71,8 @@ void TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::InitRHI(FRHI
 	InitDeclaration(Elements);
 }
 
-template <bool bWithQuadtreeMeshSelectionSupport>
-void TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::ReleaseRHI()
+
+inline void FQuadtreeMeshVertexFactory::ReleaseRHI()
 {
 	for (auto& UniformBuffer : UniformBuffers)
 	{
@@ -92,50 +92,40 @@ void TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::ReleaseRHI()
 	Super::ReleaseRHI();
 }
 
-template <bool bWithQuadtreeMeshSelectionSupport>
-void TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType InRenderGroupType)
+
+inline void FQuadtreeMeshVertexFactory::SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType InRenderGroupType)
 {
 	FQuadtreeMeshVertexFactoryParameters UniformParams;
 	UniformParams.NumQuadsPerTileSide = NumQuadsPerSide;
 	UniformParams.LODScale = LODScale;
 	UniformParams.bRenderSelected = true;
 	UniformParams.bRenderUnselected = true;
-
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT
 	UniformParams.bRenderSelected = (InRenderGroupType != EQuadtreeMeshRenderGroupType::RG_RenderUnselectedQuadtreeMeshTilesOnly);
 	UniformParams.bRenderUnselected = (InRenderGroupType != EQuadtreeMeshRenderGroupType::RG_RenderSelectedQuadtreeMeshTilesOnly);
-#endif 
-
 	UniformBuffers[static_cast<int32>(InRenderGroupType)] = FQuadtreeMeshVertexFactoryBufferRef::CreateUniformBufferImmediate(UniformParams, UniformBuffer_MultiFrame);
 }
 
-template <bool bWithQuadtreeMeshSelectionSupport>
-bool TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::ShouldCompilePermutation(const FVertexFactoryShaderPermutationParameters& Parameters)
+
+inline bool FQuadtreeMeshVertexFactory::ShouldCompilePermutation(const FVertexFactoryShaderPermutationParameters& Parameters)
 {
 	const bool bIsCompatibleWithQuadtreeMesh = Parameters.MaterialParameters.MaterialDomain == MD_Surface || Parameters.MaterialParameters.bIsSpecialEngineMaterial;
 	if (bIsCompatibleWithQuadtreeMesh)
 	{
-		return (!bWithQuadtreeMeshSelectionSupport || IsPCPlatform(Parameters.Platform));
+		return (IsPCPlatform(Parameters.Platform));
 	}
 	return false;
 }
 
-template <bool bWithQuadtreeMeshSelectionSupport>
-void TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::ModifyCompilationEnvironment(const FVertexFactoryShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+
+inline void FQuadtreeMeshVertexFactory::ModifyCompilationEnvironment(const FVertexFactoryShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 {
 	OutEnvironment.SetDefine(TEXT("QUADTREE_MESH_FACTORY"), 1);
-
-	if (bWithQuadtreeMeshSelectionSupport)
-	{
-		OutEnvironment.SetDefine(TEXT("USE_VERTEXFACTORY_HITPROXY_ID"), TEXT("1"));
-		OutEnvironment.SetDefine(TEXT("WITH_QUADTREEMESH_SELECTION_SUPPORT_VF"), TEXT("1"));
-	}
-
+	OutEnvironment.SetDefine(TEXT("USE_VERTEXFACTORY_HITPROXY_ID"), TEXT("1"));
 	OutEnvironment.SetDefine(TEXT("RAY_TRACING_DYNAMIC_MESH_IN_LOCAL_SPACE"), TEXT("1"));
 }
 
-template <bool bWithQuadtreeMeshSelectionSupport>
-void TQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>::GetPSOPrecacheVertexFetchElements(EVertexInputStreamType VertexInputStreamType, FVertexDeclarationElementList& Elements)
+
+inline void FQuadtreeMeshVertexFactory::GetPSOPrecacheVertexFetchElements(EVertexInputStreamType VertexInputStreamType, FVertexDeclarationElementList& Elements)
 {
 	// Add position stream
 	Elements.Add(FVertexElement(0, 0, VET_Float4, 0, sizeof(FVector4f), false));

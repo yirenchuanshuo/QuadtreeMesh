@@ -11,23 +11,18 @@ struct FQuadtreeMeshRenderData
 	UMaterialInterface* Material = nullptr;
 	double SurfaceBaseHeight = 0.0;
 	int16 MaterialIndex = INDEX_NONE;
-
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT
+	
 	/** Hit proxy for this QUADTREEMESH */
 	TRefCountPtr<HHitProxy> HitProxy = nullptr;
 	/** Whether the water body actor is selected or not */
 	bool bQuadtreeMeshSelected = false;
-#endif
 
 	bool operator==(const FQuadtreeMeshRenderData& Other) const
 	{
 		return	Material				== Other.Material &&
 				SurfaceBaseHeight		== Other.SurfaceBaseHeight
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT
 				&& HitProxy == Other.HitProxy
-				&& bQuadtreeMeshSelected == Other.bQuadtreeMeshSelected
-#endif // WITH_WATER_SELECTION_SUPPORT
-		; 
+				&& bQuadtreeMeshSelected == Other.bQuadtreeMeshSelected; 
 	}
 	
 };
@@ -37,7 +32,7 @@ struct FMeshQuadTree
 {
 	enum { INVALID_PARENT = 0xFFFFFFF };
 
-	static constexpr int32 NumStreams = WITH_QUADTREEMESH_SELECTION_SUPPORT ? 3 : 2;
+	static constexpr int32 NumStreams =  3 ;
 
 	struct FStagingInstanceData
 	{
@@ -84,11 +79,10 @@ struct FMeshQuadTree
 #endif
 	};
 
-
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT
+	
 	/** Obtain all possible hit proxies (proxies of all the water bodies) */
 	void GatherHitProxies(TArray<TRefCountPtr<HHitProxy> >& OutHitProxies) const;
-#endif
+
 
 public:
 	/** 

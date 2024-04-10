@@ -13,30 +13,22 @@ UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	// ...
+	// ...DefaultMaterialName
 	SetMobility(EComponentMobility::Static);
 
 	struct FConstructorStatics
 	{
-		// Find Textures
-		ConstructorHelpers::FObjectFinder<UMaterialInterface> DefautMaterial;
-		FConstructorStatics()
-			: DefautMaterial(TEXT("MaterialInterface'DefaultMaterialName'"))
+		ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultMaterial;
+		FConstructorStatics():
+			DefaultMaterial(TEXT("/Engine/EngineMaterials/WorldGridMaterial.WorldGridMaterial"))
 		{
 		}
 	};
 	static FConstructorStatics ConstructorStatics;
-	MeshDefaultMaterial = ConstructorStatics.DefautMaterial.Object;
+	OverrideMaterials.Init(ConstructorStatics.DefaultMaterial.Object, 1);
 }
 
-void UQuadtreeMeshComponent::PostLoad()
-{
-	Super::PostLoad();
-#if WITH_EDITORONLY_DATA
-	OverrideMaterials.Init(nullptr,1);
-	SetMaterial(0,MeshDefaultMaterial);
-#endif
-}
+
 
 void UQuadtreeMeshComponent::PostInitProperties()
 {
@@ -79,7 +71,7 @@ bool UQuadtreeMeshComponent::ShouldRenderSelected() const
 void UQuadtreeMeshComponent::CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams,
 	FComponentPSOPrecacheParamsList& OutParams)
 {
-	const FVertexFactoryType* QuadtreeMeshVertexFactoryType = nullptr;
+	FVertexFactoryType* FQuadtreeMeshVertexFactory = &FQuadtreeMeshVertexFactory::StaticType;
 	for (UMaterialInterface* MaterialInterface : OverrideMaterials)
 	{
 		if (MaterialInterface)
@@ -87,7 +79,7 @@ void UQuadtreeMeshComponent::CollectPSOPrecacheData(const FPSOPrecacheParams& Ba
 			FComponentPSOPrecacheParams& ComponentParams = OutParams[OutParams.AddDefaulted()];
 			ComponentParams.Priority = EPSOPrecachePriority::High;
 			ComponentParams.MaterialInterface = MaterialInterface;
-			ComponentParams.VertexFactoryDataList.Add(FPSOPrecacheVertexFactoryData(QuadtreeMeshVertexFactoryType));
+			ComponentParams.VertexFactoryDataList.Add(FPSOPrecacheVertexFactoryData(FQuadtreeMeshVertexFactory));
 			ComponentParams.PSOPrecacheParams = BasePrecachePSOParams;
 		}
 	}
@@ -149,10 +141,10 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 	RenderData.SurfaceBaseHeight = this->GetComponentLocation().Z;
 	
 	AActor* QuadtreeMeshOwner = GetOwner();
-#if WITH_QUADTREEMESH_SELECTION_SUPPORT
+
 	RenderData.HitProxy = new HActor(/*InActor = */QuadtreeMeshOwner, /*InPrimComponent = */nullptr);
 	RenderData.bQuadtreeMeshSelected = QuadtreeMeshOwner->IsSelected();
-#endif
+
 
 	const uint32 QuadtreeMeshRenderDataIndex = MeshQuadTree.AddQuadtreeMeshRenderData(RenderData);
 	const FBox OceanBounds = QuadtreeMeshOwner->GetComponentsBoundingBox();

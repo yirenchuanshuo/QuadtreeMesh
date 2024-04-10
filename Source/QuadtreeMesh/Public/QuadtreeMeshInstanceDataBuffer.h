@@ -2,12 +2,12 @@
 
 #include "RenderingThread.h"
 
-template <bool bWithQuadtreeMeshSelectionSupport>
-class TQuadtreeMeshInstanceDataBuffers
+
+class FQuadtreeMeshInstanceDataBuffers
 {
 public:
-	static constexpr int32 NumBuffers = bWithQuadtreeMeshSelectionSupport ? 3 : 2;
-	TQuadtreeMeshInstanceDataBuffers(int32 InInstanceCount)
+	static constexpr int32 NumBuffers =  3 ;
+	FQuadtreeMeshInstanceDataBuffers(int32 InInstanceCount)
 	{
 		ENQUEUE_RENDER_COMMAND(AllocateQuadtreeMeshInstanceDataBuffer)
 		(
@@ -26,7 +26,7 @@ public:
 		);
 	}
 	
-	~TQuadtreeMeshInstanceDataBuffers()
+	~FQuadtreeMeshInstanceDataBuffers()
 	{
 		for (int32 i = 0; i < NumBuffers; ++i)
 		{
