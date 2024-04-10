@@ -140,6 +140,7 @@ public:
 private:
 	
 	
+	
 	int32 TreeDepth = 0;
 
 	float LeafSize = 0.0f;

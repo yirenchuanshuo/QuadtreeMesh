@@ -65,10 +65,10 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Compone
 
 FQuadtreeMeshSceneProxy::~FQuadtreeMeshSceneProxy()
 {
-	for (FQuadtreeMeshVertexFactory* WaterFactory : QuadtreeMeshVertexFactories)
+	for (FQuadtreeMeshVertexFactory* QuadtreeMeshFactory : QuadtreeMeshVertexFactories)
 	{
-		WaterFactory->ReleaseResource();
-		delete WaterFactory;
+		QuadtreeMeshFactory->ReleaseResource();
+		delete QuadtreeMeshFactory;
 	}
 
 	delete QuadtreeMeshInstanceDataBuffers;
@@ -76,12 +76,12 @@ FQuadtreeMeshSceneProxy::~FQuadtreeMeshSceneProxy()
 	delete QuadtreeMeshUserDataBuffers;
 
 #if RHI_RAYTRACING
-	for (auto& WaterDataArray : RayTracingQuadtreeMeshData)
+	for (auto& QuadtreeMeshDataArray : RayTracingQuadtreeMeshData)
 	{
-		for (auto& WaterRayTracingItem : WaterDataArray)
+		for (auto& QuadtreeMeshRayTracingItem : QuadtreeMeshDataArray)
 		{
-			WaterRayTracingItem.Geometry.ReleaseResource();
-			WaterRayTracingItem.DynamicVertexBuffer.Release();
+			QuadtreeMeshRayTracingItem.Geometry.ReleaseResource();
+			QuadtreeMeshRayTracingItem.DynamicVertexBuffer.Release();
 		}
 	}	
 #endif
@@ -185,9 +185,9 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 
 	// Get number of total instances for all views
 	int32 TotalInstanceCount = 0;
-	for (const FMeshQuadTree::FTraversalOutput& WaterInstanceData : QuadtreeMeshInstanceDataPerView)
+	for (const FMeshQuadTree::FTraversalOutput& QuadtreeMeshInstanceData : QuadtreeMeshInstanceDataPerView)
 	{
-		TotalInstanceCount += WaterInstanceData.InstanceCount;
+		TotalInstanceCount += QuadtreeMeshInstanceData.InstanceCount;
 	}
 
 	if (TotalInstanceCount == 0)
@@ -209,11 +209,11 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 		{
 			TRACE_CPUPROFILER_EVENT_SCOPE(BucketsPerView);
 
-			FMeshQuadTree::FTraversalOutput& WaterInstanceData = QuadtreeMeshInstanceDataPerView[TraversalIndex];
-			const int32 NumWaterMaterials = MeshQuadTree.GetQuadtreeMeshMaterials().Num();
+			FMeshQuadTree::FTraversalOutput& QuadtreeMeshInstanceData = QuadtreeMeshInstanceDataPerView[TraversalIndex];
+			const int32 NumQuadtreeMeshMaterials = MeshQuadTree.GetQuadtreeMeshMaterials().Num();
 			TraversalIndex++;
 
-			for (int32 MaterialIndex = 0; MaterialIndex < NumWaterMaterials; ++MaterialIndex)
+			for (int32 MaterialIndex = 0; MaterialIndex < NumQuadtreeMeshMaterials; ++MaterialIndex)
 			{
 				TRACE_CPUPROFILER_EVENT_SCOPE(MaterialBucket);
 				bool bMaterialDrawn = false;
@@ -221,7 +221,7 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 				for (int32 DensityIndex = 0; DensityIndex < DensityCount; ++DensityIndex)
 				{
 					const int32 BucketIndex = MaterialIndex * DensityCount + DensityIndex;
-					const int32 InstanceCount = WaterInstanceData.BucketInstanceCounts[BucketIndex];
+					const int32 InstanceCount = QuadtreeMeshInstanceData.BucketInstanceCounts[BucketIndex];
 
 					if (!InstanceCount)
 					{
@@ -305,18 +305,18 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 
 					// Note : we're repurposing the BucketInstanceCounts array here for storing the actual offset in the buffer. This means that effectively from this point on, BucketInstanceCounts doesn't actually 
 					//  contain the number of instances anymore : 
-					WaterInstanceData.BucketInstanceCounts[BucketIndex] = InstanceDataOffset;
+					QuadtreeMeshInstanceData.BucketInstanceCounts[BucketIndex] = InstanceDataOffset;
 					InstanceDataOffset += InstanceCount;
 				}
 
 				INC_DWORD_STAT_BY(STAT_QuadtreeMeshDrawnMats, static_cast<int32>(bMaterialDrawn));
 			}
 
-			const int32 NumStagingInstances = WaterInstanceData.StagingInstanceData.Num();
+			const int32 NumStagingInstances = QuadtreeMeshInstanceData.StagingInstanceData.Num();
 			for (int32 Idx = 0; Idx < NumStagingInstances; ++Idx)
 			{
-				const FMeshQuadTree::FStagingInstanceData& Data = WaterInstanceData.StagingInstanceData[Idx];
-				const int32 WriteIndex = WaterInstanceData.BucketInstanceCounts[Data.BucketIndex]++;
+				const FMeshQuadTree::FStagingInstanceData& Data = QuadtreeMeshInstanceData.StagingInstanceData[Idx];
+				const int32 WriteIndex = QuadtreeMeshInstanceData.BucketInstanceCounts[Data.BucketIndex]++;
 
 				for (int32 StreamIdx = 0; StreamIdx < FQuadtreeMeshInstanceDataBuffers::NumBuffers; ++StreamIdx)
 				{
@@ -343,12 +343,225 @@ FPrimitiveViewRelevance FQuadtreeMeshSceneProxy::GetViewRelevance(const FSceneVi
 	Result.bDynamicRelevance = true;
 	Result.bStaticRelevance = false;
 	Result.bRenderInMainPass = ShouldRenderInMainPass();
-	Result.bUsesLightingChannels = false;
+	Result.bUsesLightingChannels = true;
 	Result.bRenderCustomDepth = ShouldRenderCustomDepth();
 	Result.bTranslucentSelfShadow = bCastVolumetricTranslucentShadow;
 	MaterialRelevance.SetPrimitiveViewRelevance(Result);
 	Result.bVelocityRelevance = DrawsVelocity() && Result.bOpaque && Result.bRenderInMainPass;
 	return Result;
+}
+
+HHitProxy* FQuadtreeMeshSceneProxy::CreateHitProxies(UPrimitiveComponent* Component,
+	TArray<TRefCountPtr<HHitProxy>>& OutHitProxies)
+{
+	MeshQuadTree.GatherHitProxies(OutHitProxies);
+	return nullptr;
+}
+
+
+class FQuadtreeMeshVertexFactoryUserDataWrapper : public FOneFrameResource
+{
+public:
+	FQuadtreeMeshUserData UserData;
+};
+
+void FQuadtreeMeshSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialGatheringContext& Context,
+	TArray<FRayTracingInstance>& OutRayTracingInstances)
+{
+	if (!HasQuadtreeData())
+	{
+		return;
+	}
+
+	const FSceneView& SceneView = *Context.ReferenceView;
+	const FVector ObserverPosition = SceneView.ViewMatrices.GetViewOrigin();
+
+	FQuadtreeMeshLODParams QuadtreeMeshLODParams = GetQuadtreeMeshLODParams(ObserverPosition);
+
+	const int32 NumBuckets = MeshQuadTree.GetQuadtreeMeshMaterials().Num() * DensityCount;
+
+	FMeshQuadTree::FTraversalOutput QuadtreeMeshInstanceData;
+	QuadtreeMeshInstanceData.BucketInstanceCounts.Empty(NumBuckets);
+	QuadtreeMeshInstanceData.BucketInstanceCounts.AddZeroed(NumBuckets);
+
+	FMeshQuadTree::FTraversalDesc TraversalDesc;
+	TraversalDesc.LowestLOD = QuadtreeMeshLODParams.LowestLOD;
+	TraversalDesc.HeightMorph = QuadtreeMeshLODParams.HeightLODFactor;
+	TraversalDesc.LODCount = MeshQuadTree.GetTreeDepth();
+	TraversalDesc.DensityCount = DensityCount;
+	TraversalDesc.ForceCollapseDensityLevel = ForceCollapseDensityLevel;
+	TraversalDesc.PreViewTranslation = SceneView.ViewMatrices.GetPreViewTranslation();
+	TraversalDesc.ObserverPosition = ObserverPosition;
+	TraversalDesc.Frustum = FConvexVolume(); // Default volume to disable frustum culling
+	TraversalDesc.LODScale = LODScale;
+	TraversalDesc.bLODMorphingEnabled = true;
+	TraversalDesc.TessellatedQuadtreeMeshBounds = TessellatedQuadtreeMeshBounds;
+
+	MeshQuadTree.BuildQuadtreeMeshTileInstanceData(TraversalDesc, QuadtreeMeshInstanceData);
+
+	if (QuadtreeMeshInstanceData.InstanceCount == 0)
+	{
+		// no instance visible, early exit
+		return;
+	}
+
+	const int32 NumQuadtreeMeshMaterials = MeshQuadTree.GetQuadtreeMeshMaterials().Num();	
+
+	for (int32 DensityIndex = 0; DensityIndex < DensityCount; ++DensityIndex)
+	{
+		int32 DensityInstanceCount = 0;
+		for (int32 MaterialIndex = 0; MaterialIndex < NumQuadtreeMeshMaterials; ++MaterialIndex)
+		{
+			const int32 BucketIndex = MaterialIndex * DensityCount + DensityIndex;
+			const int32 InstanceCount = QuadtreeMeshInstanceData.BucketInstanceCounts[BucketIndex];
+			DensityInstanceCount += InstanceCount;
+		}
+
+		SetupRayTracingInstances(Context.GraphBuilder.RHICmdList, DensityInstanceCount, DensityIndex);
+	}
+
+	// Create per-bucket prefix sum and sort instance data so we can easily access per-instance data for each density
+	TArray<int32> BucketOffsets;
+	BucketOffsets.SetNumZeroed(NumBuckets);
+
+	for (int32 BucketIndex = 1; BucketIndex < NumBuckets; ++BucketIndex)
+	{
+		BucketOffsets[BucketIndex] = BucketOffsets[BucketIndex - 1] + QuadtreeMeshInstanceData.BucketInstanceCounts[BucketIndex - 1];
+	}
+	
+	QuadtreeMeshInstanceData.StagingInstanceData.StableSort([](const FMeshQuadTree::FStagingInstanceData& Lhs, const FMeshQuadTree::FStagingInstanceData& Rhs)
+		{
+			return Lhs.BucketIndex < Rhs.BucketIndex;
+		});
+
+	FMeshBatch BaseMesh;
+	BaseMesh.ReverseCulling = IsLocalToWorldDeterminantNegative();
+	BaseMesh.Type = PT_TriangleList;
+	BaseMesh.bUseForMaterial = true;
+	BaseMesh.CastShadow = false;
+	BaseMesh.CastRayTracedShadow = false;
+	BaseMesh.SegmentIndex = 0;
+	BaseMesh.Elements.AddZeroed();
+
+	for (int32 DensityIndex = 0; DensityIndex < DensityCount; ++DensityIndex)
+	{
+		int32 DensityInstanceIndex = 0;
+		
+		BaseMesh.VertexFactory = QuadtreeMeshVertexFactories[DensityIndex];
+
+		FMeshBatchElement& BatchElement = BaseMesh.Elements[0];
+
+		BatchElement.NumInstances = 1;
+
+		BatchElement.FirstIndex = 0;
+		BatchElement.NumPrimitives = QuadtreeMeshVertexFactories[DensityIndex]->IndexBuffer->GetIndexCount() / 3;
+		BatchElement.MinVertexIndex = 0;
+		BatchElement.MaxVertexIndex = QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetVertexCount() - 1;
+
+		// Don't use primitive buffer
+		BatchElement.IndexBuffer = QuadtreeMeshVertexFactories[DensityIndex]->IndexBuffer;
+		BatchElement.PrimitiveIdMode = PrimID_ForceZero;
+		BatchElement.PrimitiveUniformBufferResource = &GIdentityPrimitiveUniformBuffer;
+
+		for (int32 MaterialIndex = 0; MaterialIndex < NumQuadtreeMeshMaterials; ++MaterialIndex)
+		{
+			const int32 BucketIndex = MaterialIndex * DensityCount + DensityIndex;
+			const int32 InstanceCount = QuadtreeMeshInstanceData.BucketInstanceCounts[BucketIndex];
+
+			if (!InstanceCount)
+			{
+				continue;
+			}
+
+			const FMaterialRenderProxy* MaterialRenderProxy = MeshQuadTree.GetQuadtreeMeshMaterials()[MaterialIndex];
+			check(MaterialRenderProxy != nullptr);
+
+			BaseMesh.MaterialRenderProxy = MaterialRenderProxy;
+
+			for (int32 InstanceIndex = 0; InstanceIndex < InstanceCount; ++InstanceIndex)
+			{
+				using FQuadtreeMeshVertexFactoryUserDataWrapperType = FQuadtreeMeshVertexFactoryUserDataWrapper;
+				FQuadtreeMeshVertexFactoryUserDataWrapperType& UserDataWrapper = Context.RayTracingMeshResourceCollector.AllocateOneFrameResource<FQuadtreeMeshVertexFactoryUserDataWrapperType>();
+
+				const int32 InstanceDataIndex = BucketOffsets[BucketIndex] + InstanceIndex;
+				const FMeshQuadTree::FStagingInstanceData& InstanceData = QuadtreeMeshInstanceData.StagingInstanceData[InstanceDataIndex];
+
+				FQuadtreeMeshVertexFactoryRaytracingParameters UniformBufferParams;
+				UniformBufferParams.VertexBuffer = QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetSRV();
+				UniformBufferParams.InstanceData0 = InstanceData.Data[0];
+				UniformBufferParams.InstanceData1 = InstanceData.Data[1];
+
+				UserDataWrapper.UserData.InstanceDataBuffers = QuadtreeMeshUserDataBuffers->GetUserData(EQuadtreeMeshRenderGroupType::RG_RenderQuadtreeMeshTiles)->InstanceDataBuffers;
+				UserDataWrapper.UserData.RenderGroupType = EQuadtreeMeshRenderGroupType::RG_RenderQuadtreeMeshTiles;
+				UserDataWrapper.UserData.QuadtreeMeshVertexFactoryRaytracingVFUniformBuffer = FQuadtreeMeshVertexFactoryRaytracingParametersRef::CreateUniformBufferImmediate(UniformBufferParams, UniformBuffer_SingleFrame);
+							
+				BatchElement.UserData = (void*)&UserDataWrapper.UserData;							
+
+				FRayTracingQuadtreeMeshData& QuadtreeMeshInstanceRayTracingData = RayTracingQuadtreeMeshData[DensityIndex][DensityInstanceIndex++];
+
+				FRayTracingInstance RayTracingInstance;
+				RayTracingInstance.Geometry = &QuadtreeMeshInstanceRayTracingData.Geometry;
+				RayTracingInstance.InstanceTransforms.Add(GetLocalToWorld());
+				RayTracingInstance.Materials.Add(BaseMesh);
+				OutRayTracingInstances.Add(RayTracingInstance);
+
+				Context.DynamicRayTracingGeometriesToUpdate.Add(
+					FRayTracingDynamicGeometryUpdateParams
+					{
+						RayTracingInstance.Materials,
+						false,
+						uint32(QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetVertexCount()),
+						uint32(QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetVertexCount() * sizeof(FVector3f)),
+						uint32(QuadtreeMeshVertexFactories[DensityIndex]->IndexBuffer->GetIndexCount() / 3),
+						&QuadtreeMeshInstanceRayTracingData.Geometry,
+						nullptr,
+						true
+					}
+				);				
+			}
+		}
+	}
+}
+
+void FQuadtreeMeshSceneProxy::SetupRayTracingInstances(FRHICommandListBase& RHICmdList, int32 NumInstances,
+	uint32 DensityIndex)
+{
+	TArray<FRayTracingQuadtreeMeshData>& QuadtreeMeshDataArray = RayTracingQuadtreeMeshData[DensityIndex];
+
+	if (QuadtreeMeshDataArray.Num() > NumInstances)
+	{
+		for (int32 Item = NumInstances; Item < QuadtreeMeshDataArray.Num(); Item++)
+		{
+			auto& QuadtreeMeshItem = QuadtreeMeshDataArray[Item];
+			QuadtreeMeshItem.Geometry.ReleaseResource();
+			QuadtreeMeshItem.DynamicVertexBuffer.Release();
+		}
+		QuadtreeMeshDataArray.SetNum(NumInstances);
+	}	
+
+	if (QuadtreeMeshDataArray.Num() < NumInstances)
+	{
+		FRayTracingGeometryInitializer Initializer;
+		static const FName DebugName("FQuadtreeMeshSceneProxy");		
+		Initializer.IndexBuffer = QuadtreeMeshVertexFactories[DensityIndex]->IndexBuffer->IndexBufferRHI;
+		Initializer.GeometryType = RTGT_Triangles;
+		Initializer.bFastBuild = true;
+		Initializer.bAllowUpdate = true;
+		Initializer.TotalPrimitiveCount = 0;
+
+		QuadtreeMeshDataArray.Reserve(NumInstances);
+		const int32 StartIndex = QuadtreeMeshDataArray.Num();
+
+		for (int32 Item = StartIndex; Item < NumInstances; Item++)
+		{
+			FRayTracingQuadtreeMeshData& QuadtreeMeshData = QuadtreeMeshDataArray.AddDefaulted_GetRef();
+
+			Initializer.DebugName = FName(DebugName, Item);
+
+			QuadtreeMeshData.Geometry.SetInitializer(Initializer);
+			QuadtreeMeshData.Geometry.InitResource(RHICmdList);
+		}
+	}
 }
 
 FQuadtreeMeshSceneProxy::FQuadtreeMeshLODParams FQuadtreeMeshSceneProxy::GetQuadtreeMeshLODParams(
@@ -358,17 +571,17 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshLODParams FQuadtreeMeshSceneProxy::GetQuad
 	MeshQuadTree.QueryInterpolatedTileBaseHeightAtLocation(FVector2D(Position), QuadtreeMeshHeightForLOD);
 
 	// Need to let the lowest LOD morph globally towards the next LOD. When the LOD is done morphing, simply clamp the LOD in the LOD selection to effectively promote the lowest LOD to the same LOD level as the one above
-	float DistToWater = FMath::Abs(Position.Z - QuadtreeMeshHeightForLOD) / LODScale;
-	DistToWater = FMath::Max(DistToWater - 2.0f, 0.0f);
-	DistToWater *= 2.0f;
+	float DistToQuadtreeMesh = FMath::Abs(Position.Z - QuadtreeMeshHeightForLOD) / LODScale;
+	DistToQuadtreeMesh = FMath::Max(DistToQuadtreeMesh - 2.0f, 0.0f);
+	DistToQuadtreeMesh *= 2.0f;
 
 	// Clamp to WaterTileQuadTree.GetLODCount() - 1.0f prevents the last LOD to morph
-	const float FloatLOD = FMath::Clamp(FMath::Log2(DistToWater), 0.0f, MeshQuadTree.GetTreeDepth() - 1.0f);
+	const float FloatLOD = FMath::Clamp(FMath::Log2(DistToQuadtreeMesh), 0.0f, MeshQuadTree.GetTreeDepth() - 1.0f);
 
-	FQuadtreeMeshLODParams WaterLODParams;
-	WaterLODParams.HeightLODFactor = FMath::Frac(FloatLOD);
-	WaterLODParams.LowestLOD = FMath::Clamp(FMath::FloorToInt(FloatLOD), 0, MeshQuadTree.GetTreeDepth() - 1);
-	WaterLODParams.QuadtreeMeshHeightForLOD = QuadtreeMeshHeightForLOD;
+	FQuadtreeMeshLODParams QuadtreeMeshLODParams;
+	QuadtreeMeshLODParams.HeightLODFactor = FMath::Frac(FloatLOD);
+	QuadtreeMeshLODParams.LowestLOD = FMath::Clamp(FMath::FloorToInt(FloatLOD), 0, MeshQuadTree.GetTreeDepth() - 1);
+	QuadtreeMeshLODParams.QuadtreeMeshHeightForLOD = QuadtreeMeshHeightForLOD;
 
-	return WaterLODParams;
+	return QuadtreeMeshLODParams;
 }

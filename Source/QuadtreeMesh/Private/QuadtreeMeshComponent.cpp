@@ -67,6 +67,7 @@ bool UQuadtreeMeshComponent::ShouldRenderSelected() const
 	const bool bShouldRenderSelected = UMeshComponent::ShouldRenderSelected();
 	return bShouldRenderSelected;
 }
+#endif
 
 void UQuadtreeMeshComponent::CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams,
 	FComponentPSOPrecacheParamsList& OutParams)
@@ -153,6 +154,8 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 	MarkRenderStateDirty();
 }
 
+#if WITH_EDITOR
+
 void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	//NotifyIfMeshMaterialChanged();
@@ -176,6 +179,46 @@ void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif
+
+void UQuadtreeMeshComponent::PostLoad()
+{
+	Super::PostLoad();
+	
+	if (IsComponentPSOPrecachingEnabled())
+	{
+		FPSOPrecacheParams PrecachePSOParams;
+		SetupPrecachePSOParams(PrecachePSOParams);
+		if (OverrideMaterials[0])
+		{
+			OverrideMaterials[0]->ConditionalPostLoad();
+			OverrideMaterials[0]->PrecachePSOs(&FLocalVertexFactory::StaticType, PrecachePSOParams);
+		}
+		if (OverrideMaterials[0])
+		{
+			OverrideMaterials[0]->ConditionalPostLoad();
+			OverrideMaterials[0]->PrecachePSOs(&FLocalVertexFactory::StaticType, PrecachePSOParams);
+		}
+		if (OverrideMaterials[0])
+		{
+			OverrideMaterials[0]->ConditionalPostLoad();
+			OverrideMaterials[0]->PrecachePSOs(&FLocalVertexFactory::StaticType, PrecachePSOParams);
+		}
+	}
+
+#if WITH_EDITOR
+
+	if(IsTemplate())
+	{
+		TWeakObjectPtr<UQuadtreeMeshComponent> QuadtreeMeshComponent = this;
+		if (QuadtreeMeshComponent.IsValid())
+		{
+			QuadtreeMeshComponent->MarkPackageDirty();
+		}
+	}
+#endif
+	
+}
+
 
 /*void UQuadtreeMeshComponent::NotifyIfMeshMaterialChanged()
 {

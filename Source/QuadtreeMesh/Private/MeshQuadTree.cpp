@@ -262,6 +262,7 @@ bool FMeshQuadTree::QueryTileBoundsAtLocation(const FVector2D& InWorldLocationXY
 	return false;
 }
 
+
 bool FMeshQuadTree::FNode::CanRender(int32 InDensityLevel, int32 InForceCollapseDensityLevel,
                                      const FQuadtreeMeshRenderData& InQuadtreeMeshRenderData) const
 {

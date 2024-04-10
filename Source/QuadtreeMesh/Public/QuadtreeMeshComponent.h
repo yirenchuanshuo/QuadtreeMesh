@@ -17,7 +17,6 @@ public:
 	UQuadtreeMeshComponent();
 
 	
-
 	//UObject interface
 	virtual void PostInitProperties() override;
 
@@ -30,7 +29,14 @@ public:
 	
 #if WITH_EDITOR
 	virtual bool ShouldRenderSelected() const override;
+	
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+	
+	//class UMaterialInterface*KnownMeshMaterial = nullptr;
 #endif
+	//void NotifyIfMeshMaterialChanged();
+	
+	virtual void PostLoad() override;
 	
 	virtual void CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams, FComponentPSOPrecacheParamsList& OutParams) override;
 	//INavRelevantInterface interface
@@ -56,14 +62,9 @@ private:
 	/** Based on all water bodies in the scene, rebuild the water mesh */
 	void RebuildQuadtreeMesh(float InTileSize, const FIntPoint& InExtentInTiles);
 	
-#if WITH_EDITOR
+
+
 	
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-
-	//class UMaterialInterface*KnownMeshMaterial = nullptr;
-
-#endif
-	//void NotifyIfMeshMaterialChanged();
 
 public:
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "1", ClampMax = "12"))

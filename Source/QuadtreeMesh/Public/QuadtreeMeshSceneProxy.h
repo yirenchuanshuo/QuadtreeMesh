@@ -24,10 +24,29 @@ public:
 		return(sizeof(*this) + GetAllocatedSize());
 	}
 
+	uint32 GetAllocatedSize() const 
+	{
+		return(FPrimitiveSceneProxy::GetAllocatedSize() + (QuadtreeMeshVertexFactories.GetAllocatedSize() + QuadtreeMeshVertexFactories.Num() * sizeof(FQuadtreeMeshVertexFactory)) + MeshQuadTree.GetAllocatedSize());
+	}
+
+	virtual bool CanBeOccluded() const override
+	{
+		return !MaterialRelevance.bDisableDepthTest;
+	}
+
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const override;
 
 	virtual FPrimitiveViewRelevance GetViewRelevance(const FSceneView* View) const override;
-	
+
+#if WITH_EDITOR
+	virtual HHitProxy* CreateHitProxies(UPrimitiveComponent* Component, TArray<TRefCountPtr<HHitProxy> >& OutHitProxies) override;
+#endif
+
+#if RHI_RAYTRACING
+	virtual void GetDynamicRayTracingInstances(FRayTracingMaterialGatheringContext& Context, TArray<FRayTracingInstance>& OutRayTracingInstances) override final;
+	virtual bool HasRayTracingRepresentation() const override { return true; }
+	virtual bool IsRayTracingRelevant() const override { return true; }
+#endif
 
 
 private:
@@ -44,6 +63,9 @@ private:
 		FRayTracingGeometry Geometry;
 		FRWBuffer DynamicVertexBuffer;
 	};
+	
+	void SetupRayTracingInstances(FRHICommandListBase& RHICmdList, int32 NumInstances, uint32 DensityIndex);
+
 #endif
 
 	bool HasQuadtreeData() const 
