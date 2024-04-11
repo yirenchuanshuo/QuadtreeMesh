@@ -99,6 +99,8 @@ private:
 
 	mutable int32 HistoricalMaxViewInstanceCount = 0;
 
+	bool bIsVisble;
+
 
 #if RHI_RAYTRACING
 	// Per density array of ray tracing geometries.

@@ -25,7 +25,8 @@ UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 		}
 	};
 	static FConstructorStatics ConstructorStatics;
-	OverrideMaterials.Init(ConstructorStatics.DefaultMaterial.Object, 1);
+	MeshDefaultMaterial = ConstructorStatics.DefaultMaterial.Object;
+	OverrideMaterials.Init(MeshDefaultMaterial, 1);
 }
 
 
@@ -46,7 +47,12 @@ int32 UQuadtreeMeshComponent::GetNumMaterials() const
 
 FPrimitiveSceneProxy* UQuadtreeMeshComponent::CreateSceneProxy()
 {
-	return new FQuadtreeMeshSceneProxy(this);
+	if(RHISupportsManualVertexFetch(GMaxRHIShaderPlatform))
+	{
+		SceneProxy = new FQuadtreeMeshSceneProxy(this);
+		return SceneProxy;
+	}
+	return nullptr;
 }
 
 void UQuadtreeMeshComponent::GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool bGetDebugMaterials) const
@@ -164,7 +170,7 @@ void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 		CleanUpOverrideMaterials();
 	}
 	const FName PropertyName = PropertyChangedEvent.Property->GetFName();
-
+	
 	// 检查是否是我们关心的 OverrideMaterials 属性
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UMeshComponent, OverrideMaterials)
 		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ForceCollapseDensityLevel))
@@ -172,8 +178,7 @@ void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 		// 如果 OverrideMaterials 为空，那么我们就初始化一个空的材质数组
 		if (OverrideMaterials.IsEmpty())
 		{
-			OverrideMaterials.Init(nullptr, 1);
-			SetMaterial(0, MeshDefaultMaterial);
+			SetMaterial(0,MeshDefaultMaterial);
 		}
 	}
 	Super::PostEditChangeProperty(PropertyChangedEvent);
@@ -188,16 +193,6 @@ void UQuadtreeMeshComponent::PostLoad()
 	{
 		FPSOPrecacheParams PrecachePSOParams;
 		SetupPrecachePSOParams(PrecachePSOParams);
-		if (OverrideMaterials[0])
-		{
-			OverrideMaterials[0]->ConditionalPostLoad();
-			OverrideMaterials[0]->PrecachePSOs(&FLocalVertexFactory::StaticType, PrecachePSOParams);
-		}
-		if (OverrideMaterials[0])
-		{
-			OverrideMaterials[0]->ConditionalPostLoad();
-			OverrideMaterials[0]->PrecachePSOs(&FLocalVertexFactory::StaticType, PrecachePSOParams);
-		}
 		if (OverrideMaterials[0])
 		{
 			OverrideMaterials[0]->ConditionalPostLoad();

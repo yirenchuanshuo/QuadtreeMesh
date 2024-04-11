@@ -18,8 +18,10 @@ SIZE_T FQuadtreeMeshSceneProxy::GetTypeHash() const
 
 FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Component)
 	:FPrimitiveSceneProxy(Component),
-	 MaterialRelevance(Component->GetMaterialRelevance(GetScene().GetFeatureLevel()))
+	 MaterialRelevance(Component->GetMaterialRelevance(GetScene().GetFeatureLevel())),
+	 bIsVisble(Component->IsVisible())
 {
+	Component->Update();
 	// Cache the tiles and settings
 	MeshQuadTree = Component->GetMeshQuadTree();
 	// Leaf size * 0.5 equals the tightest possible LOD Scale that doesn't break the morphing. Can be scaled larger
@@ -92,6 +94,12 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 {
 	CSV_SCOPED_TIMING_STAT_EXCLUSIVE(QuadtreeMesh);
 	TRACE_CPUPROFILER_EVENT_SCOPE(FQuadtreeMeshSceneProxy::GetDynamicMeshElements);
+
+	if(!bIsVisble)
+	{
+		return;
+	}
+	
 	FRHICommandListBase& RHICmdList = FRHICommandListImmediate::Get();
 
 	// The water render groups we have to render for this batch : 
@@ -124,7 +132,7 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 	{
 		WireframeMaterialInstance = new FColoredMaterialRenderProxy(
 			GEngine->WireframeMaterial ? GEngine->WireframeMaterial->GetRenderProxy() : nullptr,
-			FColor::Cyan);
+			FColor(103,224,102));
 
 		Collector.RegisterOneFrameMaterialProxy(WireframeMaterialInstance);
 	}
@@ -253,7 +261,7 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 						Mesh.ReverseCulling = IsLocalToWorldDeterminantNegative();
 						Mesh.Type = PT_TriangleList;
 						Mesh.DepthPriorityGroup = SDPG_World;
-						Mesh.bCanApplyViewModeOverrides = false;
+						//Mesh.bCanApplyViewModeOverrides = true;
 						Mesh.bUseForMaterial = true;
 						Mesh.CastShadow = false;
 						// Preemptively turn off depth rendering for this mesh batch if the material doesn't need it
@@ -285,7 +293,7 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 							BatchElement.MaxVertexIndex = QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetVertexCount() - 1;
 
 							BatchElement.IndexBuffer = QuadtreeMeshVertexFactories[DensityIndex]->IndexBuffer;
-							BatchElement.PrimitiveIdMode = PrimID_ForceZero;
+							//BatchElement.PrimitiveIdMode = PrimID_ForceZero;
 
 							// We need the uniform buffer of this primitive because it stores the proper value for the bOutputVelocity flag.
 							// The identity primitive uniform buffer simply stores false for this flag which leads to missing motion vectors.

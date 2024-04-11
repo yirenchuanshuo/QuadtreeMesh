@@ -38,6 +38,7 @@ public:
 	
 	virtual void PostLoad() override;
 	
+	
 	virtual void CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams, FComponentPSOPrecacheParamsList& OutParams) override;
 	//INavRelevantInterface interface
 	virtual bool IsNavigationRelevant() const override { return false; }
@@ -91,5 +92,7 @@ private:
 	FMeshQuadTree MeshQuadTree;
 
 	bool bNeedsRebuild = true;
+
+	
 	
 };
