@@ -34,6 +34,8 @@ UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 void UQuadtreeMeshComponent::PostInitProperties()
 {
 	Super::PostInitProperties();
+	UpdateBounds();
+	MarkRenderTransformDirty();
 }
 
 int32 UQuadtreeMeshComponent::GetNumMaterials() const
@@ -137,15 +139,17 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 
 	const FBox2D MeshWorldBox = FBox2D(-WorldExtent + GridPosition, WorldExtent + GridPosition);
 	MeshQuadTree.InitTree(MeshWorldBox,InTileSize, InExtentInTiles);
-
-	const float QuadtreeMeshHeight = this->GetComponentLocation().Z;
+	
+	const float QuadtreeMeshHeight = GetComponentLocation().Z;
+	
+	
 	FQuadtreeMeshRenderData RenderData;
 	if(!ShouldRender())
 	{
 		return;
 	}
 	RenderData.Material = OverrideMaterials[0];
-	RenderData.SurfaceBaseHeight = this->GetComponentLocation().Z;
+	RenderData.SurfaceBaseHeight = QuadtreeMeshHeight;
 	
 	AActor* QuadtreeMeshOwner = GetOwner();
 
@@ -179,11 +183,23 @@ void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 		if (OverrideMaterials.IsEmpty())
 		{
 			SetMaterial(0,MeshDefaultMaterial);
+			MarkQuadtreeMeshGridDirty();
+			MarkRenderStateDirty();
 		}
 	}
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
+
 #endif
+
+void UQuadtreeMeshComponent::PushTessellatedQuadtreeMeshBoundsToPoxy(const FBox2D& TessellatedWaterMeshBounds)const
+{
+	if (SceneProxy)
+	{
+		static_cast<FQuadtreeMeshSceneProxy*>(SceneProxy)->OnTessellatedQuadtreeMeshBoundsChanged_GameThread(TessellatedWaterMeshBounds);
+	}
+}
+
 
 void UQuadtreeMeshComponent::PostLoad()
 {

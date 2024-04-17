@@ -94,6 +94,7 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 {
 	CSV_SCOPED_TIMING_STAT_EXCLUSIVE(QuadtreeMesh);
 	TRACE_CPUPROFILER_EVENT_SCOPE(FQuadtreeMeshSceneProxy::GetDynamicMeshElements);
+	checkSlow(IsInRenderingThread());
 
 	if(!bIsVisble)
 	{
@@ -359,8 +360,28 @@ FPrimitiveViewRelevance FQuadtreeMeshSceneProxy::GetViewRelevance(const FSceneVi
 	return Result;
 }
 
+void FQuadtreeMeshSceneProxy::OnTessellatedQuadtreeMeshBoundsChanged_GameThread(const FBox2D& InTessellatedWaterMeshBounds)
+{
+	check(IsInParallelGameThread() || IsInGameThread());
+
+	FQuadtreeMeshSceneProxy* SceneProxy = this;
+	ENQUEUE_RENDER_COMMAND(OnTessellatedQuadtreeMeshBoundsChanged)(
+		[SceneProxy, InTessellatedWaterMeshBounds](FRHICommandListImmediate& RHICmdList)
+		{
+			SceneProxy->OnTessellatedQuadtreeMeshBoundsChanged_RenderThread(InTessellatedWaterMeshBounds);
+		});
+}
+
+void FQuadtreeMeshSceneProxy::OnTessellatedQuadtreeMeshBoundsChanged_RenderThread(
+	const FBox2D& InTessellatedWaterMeshBounds)
+{
+	check(IsInRenderingThread());
+
+	TessellatedQuadtreeMeshBounds = InTessellatedWaterMeshBounds;
+}
+
 HHitProxy* FQuadtreeMeshSceneProxy::CreateHitProxies(UPrimitiveComponent* Component,
-	TArray<TRefCountPtr<HHitProxy>>& OutHitProxies)
+                                                     TArray<TRefCountPtr<HHitProxy>>& OutHitProxies)
 {
 	MeshQuadTree.GatherHitProxies(OutHitProxies);
 	return nullptr;
@@ -571,6 +592,8 @@ void FQuadtreeMeshSceneProxy::SetupRayTracingInstances(FRHICommandListBase& RHIC
 		}
 	}
 }
+
+
 
 FQuadtreeMeshSceneProxy::FQuadtreeMeshLODParams FQuadtreeMeshSceneProxy::GetQuadtreeMeshLODParams(
 	const FVector& Position) const

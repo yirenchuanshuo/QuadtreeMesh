@@ -18,6 +18,7 @@ public:
 
 	
 	//UObject interface
+	virtual void PostLoad() override;
 	virtual void PostInitProperties() override;
 
 	//UMeshComponent interface
@@ -31,13 +32,12 @@ public:
 	virtual bool ShouldRenderSelected() const override;
 	
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-	
 	//class UMaterialInterface*KnownMeshMaterial = nullptr;
 #endif
 	//void NotifyIfMeshMaterialChanged();
 	
-	virtual void PostLoad() override;
 	
+	void PushTessellatedQuadtreeMeshBoundsToPoxy(const FBox2D& TessellatedWaterMeshBounds)const;
 	
 	virtual void CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams, FComponentPSOPrecacheParamsList& OutParams) override;
 	//INavRelevantInterface interface

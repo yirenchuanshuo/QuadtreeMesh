@@ -38,6 +38,8 @@ public:
 
 	virtual FPrimitiveViewRelevance GetViewRelevance(const FSceneView* View) const override;
 
+	void OnTessellatedQuadtreeMeshBoundsChanged_GameThread(const FBox2D& InTessellatedWaterMeshBounds);
+
 #if WITH_EDITOR
 	virtual HHitProxy* CreateHitProxies(UPrimitiveComponent* Component, TArray<TRefCountPtr<HHitProxy> >& OutHitProxies) override;
 #endif
@@ -65,6 +67,8 @@ private:
 	};
 	
 	void SetupRayTracingInstances(FRHICommandListBase& RHICmdList, int32 NumInstances, uint32 DensityIndex);
+	
+	void OnTessellatedQuadtreeMeshBoundsChanged_RenderThread(const FBox2D& InTessellatedWaterMeshBounds);
 
 #endif
 

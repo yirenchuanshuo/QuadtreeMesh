@@ -29,7 +29,7 @@ public:
 		class FMeshDrawSingleShaderBindings& ShaderBindings,
 		FVertexInputStreamArray& VertexStreams) const
 	{
-		FQuadtreeMeshVertexFactory* VertexFactory =  (FQuadtreeMeshVertexFactory*)InVertexFactory;
+		const FQuadtreeMeshVertexFactory* VertexFactory =  static_cast<const FQuadtreeMeshVertexFactory*>(InVertexFactory);
 
 		const FQuadtreeMeshUserData* QuadtreeMeshUserData = static_cast<const FQuadtreeMeshUserData*>(BatchElement.UserData);
 
