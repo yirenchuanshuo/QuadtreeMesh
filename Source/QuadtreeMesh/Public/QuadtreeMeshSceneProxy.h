@@ -40,6 +40,8 @@ public:
 
 	void OnTessellatedQuadtreeMeshBoundsChanged_GameThread(const FBox2D& InTessellatedWaterMeshBounds);
 
+	virtual void OnTransformChanged() override;
+
 #if WITH_EDITOR
 	virtual HHitProxy* CreateHitProxies(UPrimitiveComponent* Component, TArray<TRefCountPtr<HHitProxy> >& OutHitProxies) override;
 #endif

@@ -1,18 +1,19 @@
 ﻿#pragma once
 
+
+#include "QuadtreeMeshComponent.h"
 #include "UObject/WeakObjectPtrTemplates.h"
 
 namespace UE::QuadtreeMeshInfo
 {
 	struct FRenderingContext
 	{
+	public:
+		UQuadtreeMeshComponent* QuadtreeMeshToRender = nullptr;
 		UTextureRenderTarget2D* TextureRenderTarget;
-		//TArray<UWaterBodyComponent*> WaterBodies;
-		TArray<TWeakObjectPtr<UPrimitiveComponent>> GroundPrimitiveComponents;
 		float CaptureZ;
 	};
 	
-	/*void UpdateQuadtreeMeshInfoRendering(
-		FSceneInterface* Scene,
-		const FRenderingContext& Context);*/
+	void UpdateQuadtreeMeshInfoRendering(
+		FSceneInterface* Scene);
 }

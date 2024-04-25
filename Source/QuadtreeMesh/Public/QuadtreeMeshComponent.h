@@ -7,6 +7,18 @@
 #include "QuadtreeMeshComponent.generated.h"
 
 
+enum class EQuadtreeMeshRebuildFlags
+{
+	None = 0,
+	UpdateQuadtreeMeshInfoTexture = (1 << 1),
+	UpdateQuadtreeMesh = (1 << 2),
+	All = (~0),
+};
+ENUM_CLASS_FLAGS(EQuadtreeMeshRebuildFlags);
+
+class FQuadtreeMeshViewExtension;
+
+
 UCLASS(Blueprintable, ClassGroup=(Rendering, Common), hidecategories=(Object,Activation,"Components|Activation"), ShowCategories=(Mobility), editinlinenew, meta=(BlueprintSpawnableComponent), MinimalAPI)
 class UQuadtreeMeshComponent : public UMeshComponent
 {
@@ -27,6 +39,12 @@ public:
 	//UPrimitiveComponent interface
 	virtual FPrimitiveSceneProxy* CreateSceneProxy() override;
 	virtual void GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool bGetDebugMaterials = false) const override;
+
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	//~ Begin USceneComponent Interface.
+	virtual void OnVisibilityChanged() override;
+	virtual void OnHiddenInGameChanged()override;
 	
 #if WITH_EDITOR
 	virtual bool ShouldRenderSelected() const override;
@@ -44,10 +62,16 @@ public:
 	virtual bool IsNavigationRelevant() const override { return false; }
 
 	const FMeshQuadTree& GetMeshQuadTree() const { return MeshQuadTree; }
-
+	
+	void MarkForRebuild(EQuadtreeMeshRebuildFlags Flags);
+	
 	void MarkQuadtreeMeshGridDirty() { bNeedsRebuild = true; }
 
 	void Update();
+
+	void UpdateComponentVisibility();
+
+	FVector GetDynamicQuadtreeMeshExtent()const;
 
 	FMaterialRelevance GetWaterMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const;
 
@@ -63,7 +87,7 @@ private:
 	/** Based on all water bodies in the scene, rebuild the water mesh */
 	void RebuildQuadtreeMesh(float InTileSize, const FIntPoint& InExtentInTiles);
 	
-
+	bool UpdateQuadtreeMeshInfoTexture();
 
 	
 
@@ -91,8 +115,13 @@ private:
 	
 	FMeshQuadTree MeshQuadTree;
 
+	TSharedPtr<FQuadtreeMeshViewExtension> QuadtreeMeshViewExtension;
+
 	bool bNeedsRebuild = true;
 
+	bool bNeedInfoRebuild = false;
+
+	FVector2f MeshHeightExtents;
 	
-	
+	float GroundZMin;
 };

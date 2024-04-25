@@ -18,7 +18,7 @@ class FQuadtreeMeshViewExtension : public FWorldSceneViewExtension
 	// End FSceneViewExtensionBase implementation
 
 private:
-	UE::QuadtreeMeshInfo::FRenderingContext RenderContext;
+	
 };
 
 

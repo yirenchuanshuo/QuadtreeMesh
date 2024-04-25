@@ -3,14 +3,13 @@
 #include "QuadtreeMeshComponent.h"
 #include "QuadtreeMeshSceneProxy.h"
 #include "EngineUtils.h"
-
+#include "QuadtreeMeshRender.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 
 // Sets default values for this component's properties
 UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
 	// ...DefaultMaterialName
@@ -27,6 +26,7 @@ UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 	static FConstructorStatics ConstructorStatics;
 	MeshDefaultMaterial = ConstructorStatics.DefaultMaterial.Object;
 	OverrideMaterials.Init(MeshDefaultMaterial, 1);
+	
 }
 
 
@@ -68,6 +68,26 @@ void UQuadtreeMeshComponent::GetUsedMaterials(TArray<UMaterialInterface*>& OutMa
 	}
 }
 
+void UQuadtreeMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	
+}
+
+void UQuadtreeMeshComponent::OnVisibilityChanged()
+{
+	Super::OnVisibilityChanged();
+	UpdateComponentVisibility();
+	
+}
+
+void UQuadtreeMeshComponent::OnHiddenInGameChanged()
+{
+	Super::OnHiddenInGameChanged();
+	UpdateComponentVisibility();
+}
+
 
 #if WITH_EDITOR
 bool UQuadtreeMeshComponent::ShouldRenderSelected() const
@@ -96,14 +116,45 @@ void UQuadtreeMeshComponent::CollectPSOPrecacheData(const FPSOPrecacheParams& Ba
 }
 
 
+void UQuadtreeMeshComponent::MarkForRebuild(EQuadtreeMeshRebuildFlags Flags)
+{
+	if (EnumHasAnyFlags(Flags, EQuadtreeMeshRebuildFlags::UpdateQuadtreeMesh))
+	{
+		MarkQuadtreeMeshGridDirty();
+	}
+	if (EnumHasAnyFlags(Flags, EQuadtreeMeshRebuildFlags::UpdateQuadtreeMeshInfoTexture))
+	{
+		bNeedInfoRebuild = true;
+	}
+}
+
 void UQuadtreeMeshComponent::Update()
 {
+	if(bNeedInfoRebuild)
+	{
+		
+	}
 	if(bNeedsRebuild)
 	{
 		RebuildQuadtreeMesh(TileSize,ExtentInTiles);
 		PrecachePSOs();
 		bNeedsRebuild = false;
 	}
+}
+
+void UQuadtreeMeshComponent::UpdateComponentVisibility()
+{
+	if(UWorld*World = GetWorld())
+	{
+		EQuadtreeMeshRebuildFlags RebuildFlags = EQuadtreeMeshRebuildFlags::All;
+		MarkForRebuild(RebuildFlags);
+	}
+	
+}
+
+FVector UQuadtreeMeshComponent::GetDynamicQuadtreeMeshExtent() const
+{
+	return FVector(TileSize*2,TileSize*2,0.0f);
 }
 
 FMaterialRelevance UQuadtreeMeshComponent::GetWaterMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const
@@ -139,9 +190,10 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 
 	const FBox2D MeshWorldBox = FBox2D(-WorldExtent + GridPosition, WorldExtent + GridPosition);
 	MeshQuadTree.InitTree(MeshWorldBox,InTileSize, InExtentInTiles);
+
 	
-	const float QuadtreeMeshHeight = GetComponentLocation().Z;
 	
+	const float QuadtreeMeshHeight = GetComponentLocation().Z+GetActorPositionForRenderer().Z;
 	
 	FQuadtreeMeshRenderData RenderData;
 	if(!ShouldRender())
@@ -164,11 +216,20 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 	MarkRenderStateDirty();
 }
 
+bool UQuadtreeMeshComponent::UpdateQuadtreeMeshInfoTexture()
+{
+	return true;
+}
+
+
+
 #if WITH_EDITOR
 
 void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	//NotifyIfMeshMaterialChanged();
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	
 	if (OverrideMaterials.Num())
 	{
 		CleanUpOverrideMaterials();
@@ -177,17 +238,20 @@ void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 	
 	// 检查是否是我们关心的 OverrideMaterials 属性
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UMeshComponent, OverrideMaterials)
-		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ForceCollapseDensityLevel))
+		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ForceCollapseDensityLevel)
+		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, TessellationFactor)
+		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, TileSize)
+		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ExtentInTiles))
 	{
 		// 如果 OverrideMaterials 为空，那么我们就初始化一个空的材质数组
-		if (OverrideMaterials.IsEmpty())
+		/*if (OverrideMaterials.IsEmpty())
 		{
-			SetMaterial(0,MeshDefaultMaterial);
-			MarkQuadtreeMeshGridDirty();
-			MarkRenderStateDirty();
-		}
+			SetMaterial(0,NewMaterial);
+		}*/
+		MarkQuadtreeMeshGridDirty();
+		MarkRenderStateDirty();
 	}
-	Super::PostEditChangeProperty(PropertyChangedEvent);
+	
 }
 
 #endif
@@ -227,6 +291,8 @@ void UQuadtreeMeshComponent::PostLoad()
 		}
 	}
 #endif
+
+	MarkQuadtreeMeshGridDirty();
 	
 }
 

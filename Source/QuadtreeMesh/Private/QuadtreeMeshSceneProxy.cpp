@@ -21,7 +21,7 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Compone
 	 MaterialRelevance(Component->GetMaterialRelevance(GetScene().GetFeatureLevel())),
 	 bIsVisble(Component->IsVisible())
 {
-	Component->Update();
+	
 	// Cache the tiles and settings
 	MeshQuadTree = Component->GetMeshQuadTree();
 	// Leaf size * 0.5 equals the tightest possible LOD Scale that doesn't break the morphing. Can be scaled larger
@@ -59,6 +59,9 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Compone
 
 	MeshQuadTree.BuildMaterialIndices();
 
+	
+	
+	
 #if RHI_RAYTRACING
 	RayTracingQuadtreeMeshData.SetNum(DensityCount);
 #endif
@@ -370,6 +373,11 @@ void FQuadtreeMeshSceneProxy::OnTessellatedQuadtreeMeshBoundsChanged_GameThread(
 		{
 			SceneProxy->OnTessellatedQuadtreeMeshBoundsChanged_RenderThread(InTessellatedWaterMeshBounds);
 		});
+}
+
+void FQuadtreeMeshSceneProxy::OnTransformChanged()
+{
+	FPrimitiveSceneProxy::OnTransformChanged();
 }
 
 void FQuadtreeMeshSceneProxy::OnTessellatedQuadtreeMeshBoundsChanged_RenderThread(

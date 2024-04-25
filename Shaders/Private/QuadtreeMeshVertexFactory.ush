@@ -110,6 +110,16 @@ void SetUV(inout FVertexFactoryInterpolantsVSToPS Interpolants, int UVIndex, flo
 }
 #endif
 
+FInstanceSceneData GetInstanceData(FVertexFactoryIntermediates Intermediates)
+{
+	return Intermediates.SceneData.InstanceData;
+}
+
+float4 CalcWorldPosition(FVertexFactoryIntermediates Intermediates, float4 Position, FLWCMatrix LocalToWorld)
+{
+	return TransformLocalToTranslatedWorld(Position.xyz, LocalToWorld);
+}
+
 float3 MorphTranslatedWorldPosition(float3 OriginalTranslatedWorldPos, float2 InMorphOriginTWS, float LODLevel, float InLODScale, float2 QuadSize, float HeightLODFactor, out float LODFactor)
 {
 	float3 TranslatedWorldPos = OriginalTranslatedWorldPos;
@@ -158,7 +168,7 @@ FVertexFactoryIntermediates GetVertexFactoryIntermediates(FVertexFactoryInput In
 
 	// Lod level is in first 8 bits and ShouldMorph bit is in the 9th bit
 	const float LODLevel = (float)(PackedDataChannel & 0xFF);
-	const uint ShouldMorph = ((PackedDataChannel >> 8) & 0x1); 
+	const uint ShouldMorph = ((PackedDataChannel >> 8) & 0x1);
 
 	// Calculate the world pos
 	float3 TranslatedWorldPosition = float3(Input.Position.xy, 0.0f) * Scale + Translation;
@@ -260,6 +270,8 @@ FMaterialVertexParameters GetMaterialVertexParameters(FVertexFactoryInput Input,
 	return Result;
 }
 
+
+
 half3x3 VertexFactoryGetTangentToLocal( FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates )
 {
 	return half3x3(1,0,0,0,1,0,0,0,1);
@@ -267,6 +279,7 @@ half3x3 VertexFactoryGetTangentToLocal( FVertexFactoryInput Input, FVertexFactor
 
 float4 VertexFactoryGetWorldPosition(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
 {
+	FLWCMatrix LocalToWorld = GetInstanceData(Intermediates).LocalToWorld;
 	return float4(Intermediates.MorphedTranslatedWorldPos, 1);
 }
 

@@ -10,8 +10,7 @@ public class QuadtreeMesh : ModuleRules
 		
 		PublicIncludePaths.AddRange(
 			new string[] {
-				// ... add public include paths required here ...
-				System.IO.Path.Combine(GetModuleDirectory("Renderer"), "Private"),
+				
 			}
 			);
 				
@@ -30,7 +29,7 @@ public class QuadtreeMesh : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"RHI",
-				"GeometryCore",
+				"GeometryCore", 
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -43,9 +42,10 @@ public class QuadtreeMesh : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"Renderer",
 				"RenderCore",
 				"InputCore",
-				"Projects"
+				"Projects",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
