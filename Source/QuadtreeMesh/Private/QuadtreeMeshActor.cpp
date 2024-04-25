@@ -3,8 +3,6 @@
 
 #include "QuadtreeMeshActor.h"
 
-#include "QuadtreeMeshComponent.h"
-
 
 // Sets default values
 AQuadtreeMeshActor::AQuadtreeMeshActor()
@@ -63,6 +61,20 @@ void AQuadtreeMeshActor::Update()const
 	}
 }
 
+
+
+void AQuadtreeMeshActor::MarkForRebuild(EQuadtreeMeshRebuildFlags Flags)
+{
+	if (EnumHasAnyFlags(Flags, EQuadtreeMeshRebuildFlags::UpdateQuadtreeMesh))
+	{
+		QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
+	}
+	if (EnumHasAnyFlags(Flags, EQuadtreeMeshRebuildFlags::UpdateQuadtreeMeshInfoTexture))
+	{
+		bNeedInfoRebuild = true;
+	}
+}
+
 #if WITH_EDITOR
 
 void AQuadtreeMeshActor::PostEditMove(bool bFinished)
@@ -78,6 +90,12 @@ void AQuadtreeMeshActor::PostEditUndo()
 	QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
 }
 
+void AQuadtreeMeshActor::PostEditImport()
+{
+	Super::PostEditImport();
+	QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
+}
+
 void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
@@ -89,7 +107,6 @@ void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 		QuadtreeMeshComponent->SetMaterial(0,MeshMaterial);
 		QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
 		QuadtreeMeshComponent->MarkRenderStateDirty();
-		UE_LOG(LogTemp,Warning,TEXT("Material Changed Actor"));
 	}
 	
 }

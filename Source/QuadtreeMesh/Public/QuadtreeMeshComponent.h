@@ -49,6 +49,8 @@ public:
 	//~ Begin USceneComponent Interface.
 	virtual void OnVisibilityChanged() override;
 	virtual void OnHiddenInGameChanged()override;
+
+	void UpdateComponentVisibility(bool bIsVisible);
 	
 #if WITH_EDITOR
 	virtual bool ShouldRenderSelected() const override;
@@ -66,13 +68,9 @@ public:
 
 	const FMeshQuadTree& GetMeshQuadTree() const { return MeshQuadTree; }
 	
-	void MarkForRebuild(EQuadtreeMeshRebuildFlags Flags);
-	
 	void MarkQuadtreeMeshGridDirty() { bNeedsRebuild = true; }
 
 	void Update();
-
-	void UpdateComponentVisibility();
 
 	FVector GetDynamicQuadtreeMeshExtent()const;
 
@@ -121,8 +119,6 @@ private:
 	TSharedPtr<FQuadtreeMeshViewExtension> QuadtreeMeshViewExtension;
 
 	bool bNeedsRebuild = true;
-
-	bool bNeedInfoRebuild = false;
 
 	FVector2f MeshHeightExtents;
 	

@@ -66,14 +66,23 @@ void UQuadtreeMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 void UQuadtreeMeshComponent::OnVisibilityChanged()
 {
 	Super::OnVisibilityChanged();
-	UpdateComponentVisibility();
-	
+	//UpdateComponentVisibility(true);
 }
 
 void UQuadtreeMeshComponent::OnHiddenInGameChanged()
 {
 	Super::OnHiddenInGameChanged();
-	UpdateComponentVisibility();
+	//UpdateComponentVisibility(true);
+}
+
+void UQuadtreeMeshComponent::UpdateComponentVisibility(bool bIsVisible)
+{
+	if(UWorld*World = GetWorld())
+	{
+		bool bLocalVisible = GetVisibleFlag();
+		bool bLocalHiddenInGame = bHiddenInGame;
+		MarkQuadtreeMeshGridDirty();
+	}
 }
 
 
@@ -104,24 +113,9 @@ void UQuadtreeMeshComponent::CollectPSOPrecacheData(const FPSOPrecacheParams& Ba
 }
 
 
-void UQuadtreeMeshComponent::MarkForRebuild(EQuadtreeMeshRebuildFlags Flags)
-{
-	if (EnumHasAnyFlags(Flags, EQuadtreeMeshRebuildFlags::UpdateQuadtreeMesh))
-	{
-		MarkQuadtreeMeshGridDirty();
-	}
-	if (EnumHasAnyFlags(Flags, EQuadtreeMeshRebuildFlags::UpdateQuadtreeMeshInfoTexture))
-	{
-		bNeedInfoRebuild = true;
-	}
-}
 
 void UQuadtreeMeshComponent::Update()
 {
-	if(bNeedInfoRebuild)
-	{
-		
-	}
 	if(bNeedsRebuild)
 	{
 		RebuildQuadtreeMesh(TileSize,ExtentInTiles);
@@ -130,15 +124,6 @@ void UQuadtreeMeshComponent::Update()
 	}
 }
 
-void UQuadtreeMeshComponent::UpdateComponentVisibility()
-{
-	if(UWorld*World = GetWorld())
-	{
-		EQuadtreeMeshRebuildFlags RebuildFlags = EQuadtreeMeshRebuildFlags::All;
-		MarkForRebuild(RebuildFlags);
-	}
-	
-}
 
 FVector UQuadtreeMeshComponent::GetDynamicQuadtreeMeshExtent() const
 {
@@ -231,7 +216,6 @@ void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, TileSize)
 		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ExtentInTiles))
 	{
-		UE_LOG(LogTemp,Warning,TEXT("Material Changed Component"));
 		MarkQuadtreeMeshGridDirty();
 		MarkRenderStateDirty();
 	}
