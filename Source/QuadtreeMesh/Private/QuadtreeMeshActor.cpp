@@ -16,6 +16,17 @@ AQuadtreeMeshActor::AQuadtreeMeshActor()
 	
 	SetRootComponent(QuadtreeMeshComponent);
 
+	struct FConstructorStatics
+	{
+		ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultMaterial;
+		FConstructorStatics():
+			DefaultMaterial(TEXT("/Engine/EngineMaterials/WorldGridMaterial.WorldGridMaterial"))
+		{
+		}
+	};
+	static FConstructorStatics ConstructorStatics;
+	MeshMaterial = ConstructorStatics.DefaultMaterial.Object;
+	QuadtreeMeshComponent->SetMaterial(0,MeshMaterial);
 	QuadtreeMeshComponent->Update();
 }
 
@@ -59,6 +70,28 @@ void AQuadtreeMeshActor::PostEditMove(bool bFinished)
 	Super::PostEditMove(bFinished);
 
 	QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
+}
+
+void AQuadtreeMeshActor::PostEditUndo()
+{
+	Super::PostEditUndo();
+	QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
+}
+
+void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	//如果材质发生变化，标记网格需要重新构建
+	
+	FName PropertyName = PropertyChangedEvent.Property->GetFName();
+	if(PropertyName == GET_MEMBER_NAME_CHECKED(AQuadtreeMeshActor,MeshMaterial))
+	{
+		QuadtreeMeshComponent->SetMaterial(0,MeshMaterial);
+		QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
+		QuadtreeMeshComponent->MarkRenderStateDirty();
+		UE_LOG(LogTemp,Warning,TEXT("Material Changed Actor"));
+	}
+	
 }
 
 #endif

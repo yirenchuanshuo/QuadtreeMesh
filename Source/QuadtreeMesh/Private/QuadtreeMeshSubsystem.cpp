@@ -13,6 +13,7 @@ UQuadtreeMeshSubsystem::UQuadtreeMeshSubsystem()
 void UQuadtreeMeshSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	check(GetWorld() != nullptr);
 	
 	for (AQuadtreeMeshActor* QuadtreeMeshActor : TActorRange<AQuadtreeMeshActor>(GetWorld()))
 	{
@@ -21,4 +22,9 @@ void UQuadtreeMeshSubsystem::Tick(float DeltaTime)
 			QuadtreeMeshActor->Update();
 		}
 	}
+}
+
+TStatId UQuadtreeMeshSubsystem::GetStatId() const
+{
+	RETURN_QUICK_DECLARE_CYCLE_STAT(UQuadtreeMeshSubsystem, STATGROUP_Tickables);
 }

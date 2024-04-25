@@ -17,8 +17,7 @@ public:
 	
 	AQuadtreeMeshActor();
 
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuadtreeMesh")
+	
 	TObjectPtr<UQuadtreeMeshComponent> QuadtreeMeshComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuadtreeMesh")
@@ -33,14 +32,14 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
-
 	
-
 	virtual void PostLoadSubobjects(FObjectInstancingGraph* OuterInstanceGraph) override;
 
 	void Update()const;
 
 #if WITH_EDITOR
 	virtual void PostEditMove(bool bFinished) override;
+	virtual void PostEditUndo() override;
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 };

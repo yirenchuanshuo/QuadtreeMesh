@@ -28,6 +28,10 @@ public:
 	// Sets default values for this component's properties
 	UQuadtreeMeshComponent();
 
+	//UFUNCTION(BlueprintCallable, Category = "QuadtreeMesh")
+	
+
+public:
 	
 	//UObject interface
 	virtual void PostLoad() override;
@@ -53,7 +57,6 @@ public:
 	//class UMaterialInterface*KnownMeshMaterial = nullptr;
 #endif
 	//void NotifyIfMeshMaterialChanged();
-	
 	
 	void PushTessellatedQuadtreeMeshBoundsToPoxy(const FBox2D& TessellatedWaterMeshBounds)const;
 	

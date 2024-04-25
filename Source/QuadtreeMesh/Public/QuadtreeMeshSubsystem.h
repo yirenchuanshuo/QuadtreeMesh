@@ -17,6 +17,8 @@ public:
 	UQuadtreeMeshSubsystem();
 	
 	virtual void Tick(float DeltaTime) override;
+	virtual bool IsTickableInEditor() const override { return true; }
+	virtual TStatId GetStatId() const override;
 
 private:
 	

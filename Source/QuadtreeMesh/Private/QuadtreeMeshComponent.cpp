@@ -14,18 +14,6 @@ UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 
 	// ...DefaultMaterialName
 	SetMobility(EComponentMobility::Static);
-
-	struct FConstructorStatics
-	{
-		ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultMaterial;
-		FConstructorStatics():
-			DefaultMaterial(TEXT("/Engine/EngineMaterials/WorldGridMaterial.WorldGridMaterial"))
-		{
-		}
-	};
-	static FConstructorStatics ConstructorStatics;
-	MeshDefaultMaterial = ConstructorStatics.DefaultMaterial.Object;
-	OverrideMaterials.Init(MeshDefaultMaterial, 1);
 	
 }
 
@@ -243,11 +231,7 @@ void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, TileSize)
 		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ExtentInTiles))
 	{
-		// 如果 OverrideMaterials 为空，那么我们就初始化一个空的材质数组
-		/*if (OverrideMaterials.IsEmpty())
-		{
-			SetMaterial(0,NewMaterial);
-		}*/
+		UE_LOG(LogTemp,Warning,TEXT("Material Changed Component"));
 		MarkQuadtreeMeshGridDirty();
 		MarkRenderStateDirty();
 	}
