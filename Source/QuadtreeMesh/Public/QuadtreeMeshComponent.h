@@ -63,6 +63,15 @@ public:
 	void PushTessellatedQuadtreeMeshBoundsToPoxy(const FBox2D& TessellatedWaterMeshBounds)const;
 	
 	virtual void CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams, FComponentPSOPrecacheParamsList& OutParams) override;
+
+	void Update();
+
+	FVector GetDynamicQuadtreeMeshExtent()const;
+
+	void SetExtentInTiles(FIntPoint NewExtentInTiles);
+	
+	FIntPoint GetExtentInTiles() const { return ExtentInTiles; }
+	
 	//INavRelevantInterface interface
 	virtual bool IsNavigationRelevant() const override { return false; }
 
@@ -70,16 +79,13 @@ public:
 	
 	void MarkQuadtreeMeshGridDirty() { bNeedsRebuild = true; }
 
-	void Update();
-
-	FVector GetDynamicQuadtreeMeshExtent()const;
+	float GetTileSize() const { return TileSize; }
 
 	FMaterialRelevance GetWaterMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const;
 
 	float GetLODScale() const { return LODScale; }
 
 	int32 GetTessellationFactor() const { return FMath::Clamp(TessellationFactor, 1, 12); }
-
 
 private:
 	//USceneComponent interface

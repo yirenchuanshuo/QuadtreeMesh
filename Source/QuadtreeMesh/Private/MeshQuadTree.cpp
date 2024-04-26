@@ -133,15 +133,15 @@ void FMeshQuadTree::AddQuadtreeMeshTilesInsideBounds(const FBox& InBounds, uint3
 	NodeData.Nodes[0].AddNodes(NodeData, FBox(FVector(TileRegion.Min, 0.0f), FVector(TileRegion.Max, 0.0f)),  InBounds, InWaterBodyIndex, TreeDepth, 0);
 }
 
-void FMeshQuadTree::AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox& InOceanBounds, uint32 InQuadtreeMeshIndex)
+void FMeshQuadTree::AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox& InMeshBounds, uint32 InQuadtreeMeshIndex)
 {
 	check(!bIsReadOnly);
-	const FBox2D OceanBounds(FVector2D(InOceanBounds.Min), FVector2D(InOceanBounds.Max));
-	const FVector2D ZBound = FVector2D(InOceanBounds.Min.Z, InOceanBounds.Max.Z);
+	const FBox2D MeshBounds(FVector2D(InMeshBounds.Min), FVector2D(InMeshBounds.Max));
+	const FVector2D ZBound = FVector2D(InMeshBounds.Min.Z, InMeshBounds.Max.Z);
 	// If we are at the leaf level, add the node
 	const FVector2D LeafSizeShrink(LeafSize * 0.25, LeafSize * 0.25);
 	// No more verts in this half box, mark as water
-	const FBox TileBounds(FVector(OceanBounds.Min + LeafSizeShrink, ZBound.X), FVector(OceanBounds.Max - LeafSizeShrink, ZBound.Y));
+	const FBox TileBounds(FVector(MeshBounds.Min + LeafSizeShrink, ZBound.X), FVector(MeshBounds.Max - LeafSizeShrink, ZBound.Y));
 	AddQuadtreeMeshTilesInsideBounds(TileBounds, InQuadtreeMeshIndex);
 	
 }

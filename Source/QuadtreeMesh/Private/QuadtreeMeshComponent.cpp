@@ -3,6 +3,7 @@
 #include "QuadtreeMeshComponent.h"
 #include "QuadtreeMeshSceneProxy.h"
 #include "EngineUtils.h"
+#include "QuadtreeMeshActor.h"
 #include "QuadtreeMeshRender.h"
 #include "Engine/TextureRenderTarget2D.h"
 
@@ -130,6 +131,13 @@ FVector UQuadtreeMeshComponent::GetDynamicQuadtreeMeshExtent() const
 	return FVector(TileSize*2,TileSize*2,0.0f);
 }
 
+void UQuadtreeMeshComponent::SetExtentInTiles(FIntPoint NewExtentInTiles)
+{
+	ExtentInTiles = NewExtentInTiles;
+	MarkQuadtreeMeshGridDirty();
+	MarkRenderStateDirty();
+}
+
 FMaterialRelevance UQuadtreeMeshComponent::GetWaterMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const
 {
 	FMaterialRelevance Result;
@@ -176,14 +184,17 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 	RenderData.Material = OverrideMaterials[0];
 	RenderData.SurfaceBaseHeight = QuadtreeMeshHeight;
 	
-	AActor* QuadtreeMeshOwner = GetOwner();
+	AQuadtreeMeshActor* QuadtreeMeshOwner = GetOwner<AQuadtreeMeshActor>();
 
 	RenderData.HitProxy = new HActor(/*InActor = */QuadtreeMeshOwner, /*InPrimComponent = */nullptr);
 	RenderData.bQuadtreeMeshSelected = QuadtreeMeshOwner->IsSelected();
 
 
 	const uint32 QuadtreeMeshRenderDataIndex = MeshQuadTree.AddQuadtreeMeshRenderData(RenderData);
-	const FBox OceanBounds = QuadtreeMeshOwner->GetComponentsBoundingBox();
+	FBox Bound;
+	Bound.Max = FVector(TileSize,TileSize,0.0f);
+	Bound.Min = FVector(-TileSize,-TileSize,0.0f);
+	const FBox OceanBounds = Bound;
 	MeshQuadTree.AddQuadtreeMeshTilesInsideBounds(OceanBounds, QuadtreeMeshRenderDataIndex);
 	MeshQuadTree.Unlock(true);
 	MarkRenderStateDirty();

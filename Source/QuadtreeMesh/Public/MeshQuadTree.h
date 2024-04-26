@@ -95,7 +95,7 @@ public:
 	/** Add tiles that intersect InBounds recursively from the root node. Tree must be unlocked. Typically called on Game Thread */
 	void AddQuadtreeMeshTilesInsideBounds(const FBox& InBounds, uint32 InWaterBodyIndex);
 	
-	void AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox& InOceanBounds, uint32 InQuadtreeMeshIndex);
+	void AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox& InMeshBounds, uint32 InQuadtreeMeshIndex);
 	/** Assign an index to each material */
 	void BuildMaterialIndices();
 

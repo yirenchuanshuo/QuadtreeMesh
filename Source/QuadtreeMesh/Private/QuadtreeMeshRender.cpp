@@ -1,4 +1,5 @@
-﻿#include "QuadtreeMeshRender.h"
+﻿/*
+#include "QuadtreeMeshRender.h"
 #include "LegacyScreenPercentageDriver.h"
 #include "Modules/ModuleManager.h"
 #include "RenderCaptureInterface.h"
@@ -218,7 +219,7 @@ public:
 				SCOPED_DRAW_EVENTF(RHICmdList, QuadtreeMeshInfoRendering_RT, TEXT("RenderQuadtreeMeshInfo_%s"), *QuadtreeMeshName);
 
 				UpdateQuadtreeMeshInfoRendering_RenderThread(RHICmdList, Params);
-			});*/
+			});#1#
 	}
 }
 
@@ -261,5 +262,6 @@ void FQuadtreeMeshViewExtension::PreRenderViewFamily_RenderThread(FRDGBuilder& G
 {
 	
 }
+*/
 
 
