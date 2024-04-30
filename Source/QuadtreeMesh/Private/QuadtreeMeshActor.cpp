@@ -3,6 +3,8 @@
 
 #include "QuadtreeMeshActor.h"
 
+#include "QuadtreeMeshActorDesc.h"
+
 
 // Sets default values
 AQuadtreeMeshActor::AQuadtreeMeshActor()
@@ -34,7 +36,6 @@ AQuadtreeMeshActor::AQuadtreeMeshActor()
 void AQuadtreeMeshActor::BeginPlay()
 {
 	Super::BeginPlay();
-	MarkForRebuild(EQuadtreeMeshRebuildFlags::All);
 }
 
 FBox2D AQuadtreeMeshActor::GetQuadtreeMeshBound2D() const
@@ -86,14 +87,29 @@ void AQuadtreeMeshActor::MarkForRebuild(EQuadtreeMeshRebuildFlags Flags)
 	}
 }
 
+#if WITH_EDITORONLY_DATA
+void AQuadtreeMeshActor::DeclareConstructClasses(TArray<FTopLevelAssetPath>& OutConstructClasses,
+	const UClass* SpecificSubclass)
+{
+	Super::DeclareConstructClasses(OutConstructClasses, SpecificSubclass);
+	//OutConstructClasses.Add(FTopLevelAssetPath(UBoxComponent::StaticClass()));
+}
+#endif
+
+#if WITH_EDITOR
+TUniquePtr<FWorldPartitionActorDesc> AQuadtreeMeshActor::CreateClassActorDesc() const
+{
+	return MakeUnique<FQuadtreeMeshActorDesc>();
+}
+#endif
+
 void AQuadtreeMeshActor::PostLoad()
 {
 	Super::PostLoad();
 
 #if WITH_EDITORONLY_DATA
-	const FVector2D ExtentInTiles = 2.0 * FVector2D(QuadtreeMeshComponent->GetExtentInTiles());
-	QuadtreeMeshExtent = FVector2D(ExtentInTiles * QuadtreeMeshComponent->GetTileSize());
 	OnExtentChanged();
+	MarkForRebuild(EQuadtreeMeshRebuildFlags::All);
 #endif
 }
 
@@ -103,13 +119,13 @@ void AQuadtreeMeshActor::PostEditMove(bool bFinished)
 {
 	Super::PostEditMove(bFinished);
 
-	QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
+	MarkForRebuild(EQuadtreeMeshRebuildFlags::All);
 }
 
 void AQuadtreeMeshActor::PostEditUndo()
 {
 	Super::PostEditUndo();
-	QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
+	MarkForRebuild(EQuadtreeMeshRebuildFlags::All);
 }
 
 void AQuadtreeMeshActor::PostEditImport()
@@ -121,10 +137,8 @@ void AQuadtreeMeshActor::PostEditImport()
 void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	//如果材质发生变化，标记网格需要重新构建
-	
-	FName PropertyName = PropertyChangedEvent.Property->GetFName();
-	if(PropertyName== GET_MEMBER_NAME_CHECKED(AQuadtreeMeshActor,QuadtreeMeshExtent))
+	const FName PropertyName = PropertyChangedEvent.MemberProperty ? PropertyChangedEvent.MemberProperty->GetFName() : NAME_None;
+	if(PropertyName == GET_MEMBER_NAME_CHECKED(AQuadtreeMeshActor,QuadtreeMeshExtent))
 	{
 		OnExtentChanged();
 	}
@@ -136,22 +150,13 @@ void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 	}
 	
 }
+#endif
 
-void AQuadtreeMeshActor::OnExtentChanged()const 
+void AQuadtreeMeshActor::OnExtentChanged()
 {
-	// Compute the new tile extent based on the new bounds
-	const float MeshTileSize = QuadtreeMeshComponent->GetTileSize();
-	const FVector2D ZoneHalfExtent = QuadtreeMeshExtent / 2.0;
-
-	int32 NewExtentInTilesX = FMath::FloorToInt(ZoneHalfExtent.X / MeshTileSize);
-	int32 NewExtentInTilesY = FMath::FloorToInt(ZoneHalfExtent.Y / MeshTileSize);
-	
-	// We must ensure that the zone is always at least 1x1
-	NewExtentInTilesX = FMath::Max(1, NewExtentInTilesX);
-	NewExtentInTilesY = FMath::Max(1, NewExtentInTilesY);
-
-	QuadtreeMeshComponent->SetExtentInTiles(FIntPoint(NewExtentInTilesX, NewExtentInTilesY));
+	QuadtreeMeshComponent->SetTileSize(QuadtreeMeshExtent.X);
+	MarkForRebuild(EQuadtreeMeshRebuildFlags::All);
 }
 
-#endif
+
 

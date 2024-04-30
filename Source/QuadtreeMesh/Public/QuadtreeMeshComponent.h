@@ -7,14 +7,7 @@
 #include "QuadtreeMeshComponent.generated.h"
 
 
-enum class EQuadtreeMeshRebuildFlags
-{
-	None = 0,
-	UpdateQuadtreeMeshInfoTexture = (1 << 1),
-	UpdateQuadtreeMesh = (1 << 2),
-	All = (~0),
-};
-ENUM_CLASS_FLAGS(EQuadtreeMeshRebuildFlags);
+
 
 class FQuadtreeMeshViewExtension;
 
@@ -69,6 +62,8 @@ public:
 	FVector GetDynamicQuadtreeMeshExtent()const;
 
 	void SetExtentInTiles(FIntPoint NewExtentInTiles);
+
+	void SetTileSize(float NewTileSize);
 	
 	FIntPoint GetExtentInTiles() const { return ExtentInTiles; }
 	
@@ -111,7 +106,7 @@ public:
 private:
 	/** World size of the QuadtreeMesh tiles at LOD0. Multiply this with the ExtentInTiles to get the world extents of the system */
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "100", AllowPrivateAcces = "true"))
-	float TileSize = 2400.0f;
+	float TileSize = 4096.f;
 
 	/** The extent of the QuadtreeMesh in number of tiles. Maximum number of tiles for this system will be ExtentInTiles.X*2*ExtentInTiles.Y*2 */
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "1", AllowPrivateAcces = "true"))

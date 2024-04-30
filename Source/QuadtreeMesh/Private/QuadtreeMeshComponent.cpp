@@ -138,6 +138,13 @@ void UQuadtreeMeshComponent::SetExtentInTiles(FIntPoint NewExtentInTiles)
 	MarkRenderStateDirty();
 }
 
+void UQuadtreeMeshComponent::SetTileSize(float NewTileSize)
+{
+	TileSize = NewTileSize;
+	MarkQuadtreeMeshGridDirty();
+	MarkRenderStateDirty();
+}
+
 FMaterialRelevance UQuadtreeMeshComponent::GetWaterMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const
 {
 	FMaterialRelevance Result;
@@ -174,7 +181,7 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 
 	
 	
-	const float QuadtreeMeshHeight = GetComponentLocation().Z+GetActorPositionForRenderer().Z;
+	const float QuadtreeMeshHeight = GetComponentLocation().Z;
 	
 	FQuadtreeMeshRenderData RenderData;
 	if(!ShouldRender())
@@ -192,8 +199,9 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 
 	const uint32 QuadtreeMeshRenderDataIndex = MeshQuadTree.AddQuadtreeMeshRenderData(RenderData);
 	FBox Bound;
-	Bound.Max = FVector(TileSize,TileSize,0.0f);
-	Bound.Min = FVector(-TileSize,-TileSize,0.0f);
+	Bound.Max = FVector(InTileSize,InTileSize,0.0f);
+	Bound.Min = FVector(-InTileSize,-InTileSize,0.0f);
+	
 	const FBox OceanBounds = Bound;
 	MeshQuadTree.AddQuadtreeMeshTilesInsideBounds(OceanBounds, QuadtreeMeshRenderDataIndex);
 	MeshQuadTree.Unlock(true);

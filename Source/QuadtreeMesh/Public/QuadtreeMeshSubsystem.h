@@ -22,6 +22,17 @@ public:
 	virtual bool IsTickableInEditor() const override { return true; }
 	virtual TStatId GetStatId() const override;
 
+	// UWorldSubsystem implementation Begin
+	virtual bool DoesSupportWorldType(EWorldType::Type WorldType) const override;
+
+	// USubsystem implementation Begin
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void PostInitialize() override;
+	virtual void Deinitialize() override;
+	// USubsystem implementation End
+
 private:
-	
+#if WITH_EDITOR
+	static bool bAllowQuadtreeMeshSubsystemOnPreviewWorld;
+#endif
 };
