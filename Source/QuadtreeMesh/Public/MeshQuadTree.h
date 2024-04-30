@@ -93,7 +93,7 @@ public:
 	/** Unlock to make it read-only. This will optionally prune the node array to remove redundant nodes, nodes that can be implicitly traversed */
 	void Unlock(bool bPruneRedundantNodes);
 	/** Add tiles that intersect InBounds recursively from the root node. Tree must be unlocked. Typically called on Game Thread */
-	void AddQuadtreeMeshTilesInsideBounds(const FBox& InBounds, uint32 InWaterBodyIndex);
+	void AddQuadtreeMeshTilesInsideBounds(const FBox& InBounds, uint32 InQuadtreeMeshIndex);
 	
 	void AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox& InMeshBounds, uint32 InQuadtreeMeshIndex);
 	/** Assign an index to each material */

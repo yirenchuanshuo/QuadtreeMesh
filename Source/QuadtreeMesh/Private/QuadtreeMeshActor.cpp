@@ -160,7 +160,7 @@ void AQuadtreeMeshActor::OnExtentChanged()
 	
 	
 	const FVector2D QuadtreeMeshExtent = FVector2D(QuadtreeMeshSize);
-	const float QuadtreeMeshTileSize = QuadtreeMeshSize/LODLayer;
+	const float QuadtreeMeshTileSize = QuadtreeMeshSize/FMath::Max(2.0,FMath::Pow(2,static_cast<float>(LODLayer)));
 
 	int32 NewExtentInTilesX = FMath::FloorToInt(QuadtreeMeshExtent.X / QuadtreeMeshTileSize);
 	int32 NewExtentInTilesY = FMath::FloorToInt(QuadtreeMeshExtent.Y / QuadtreeMeshTileSize);

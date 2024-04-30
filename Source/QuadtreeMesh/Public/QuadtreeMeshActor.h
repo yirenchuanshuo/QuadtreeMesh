@@ -34,7 +34,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuadtreeMesh")
 	float QuadtreeMeshSize;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuadtreeMesh")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuadtreeMesh", meta = (ClampMin = "1"))
 	int32 LODLayer;
 	
 private:

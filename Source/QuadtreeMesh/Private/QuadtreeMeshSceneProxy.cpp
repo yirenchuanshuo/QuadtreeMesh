@@ -58,8 +58,6 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Compone
 	QuadtreeMeshUserDataBuffers = new FQuadtreeMeshUserDataBuffers(QuadtreeMeshInstanceDataBuffers);
 
 	MeshQuadTree.BuildMaterialIndices();
-
-	
 	
 	
 #if RHI_RAYTRACING

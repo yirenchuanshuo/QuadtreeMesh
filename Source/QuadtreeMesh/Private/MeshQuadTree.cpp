@@ -32,8 +32,7 @@ void FMeshQuadTree::InitTree(const FBox2D& InBounds, float InTileSize, FIntPoint
 	// Allocate theoretical max, shrink later in Lock()
 	// This is so that the node array doesn't move in memory while inserting
 	NodeData.Nodes.Empty(FMath::Square(RootDim) * 4 / 3.0f);
-
-	// Add defaulted water body render data to slot 0. This is the "null" render data, pointed to by all newly created nodes. Has lowest priority so it will always be overwritten
+	
 	NodeData.QuadtreeMeshRenderData.Empty(1);
 	NodeData.QuadtreeMeshRenderData.AddDefaulted();
 
@@ -92,8 +91,7 @@ void FMeshQuadTree::Unlock(bool bPruneRedundantNodes)
 		for (int NodeIndex = EndIndex; NodeIndex > 0; NodeIndex--)
 		{
 			FNode& ParentNode = NodeData.Nodes[NodeData.Nodes[NodeIndex].ParentIndex];
-
-			// Parent has complete subtree of the same water body, this node is redundant
+			
 			if (ParentNode.HasCompleteSubtree && ParentNode.IsSubtreeSameQuadtreeMesh)
 			{
 				// Delete all children (not strictly necessary, but now we don't leave any dangling/incorrect child pointers around)
@@ -127,10 +125,10 @@ void FMeshQuadTree::Unlock(bool bPruneRedundantNodes)
 	bIsReadOnly = true;
 }
 
-void FMeshQuadTree::AddQuadtreeMeshTilesInsideBounds(const FBox& InBounds, uint32 InWaterBodyIndex)
+void FMeshQuadTree::AddQuadtreeMeshTilesInsideBounds(const FBox& InBounds, uint32 InQuadtreeMeshIndex)
 {
 	check(!bIsReadOnly);
-	NodeData.Nodes[0].AddNodes(NodeData, FBox(FVector(TileRegion.Min, 0.0f), FVector(TileRegion.Max, 0.0f)),  InBounds, InWaterBodyIndex, TreeDepth, 0);
+	NodeData.Nodes[0].AddNodes(NodeData, FBox(FVector(TileRegion.Min, 0.0f), FVector(TileRegion.Max, 0.0f)),  InBounds, InQuadtreeMeshIndex, TreeDepth, 0);
 }
 
 void FMeshQuadTree::AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox& InMeshBounds, uint32 InQuadtreeMeshIndex)
@@ -140,7 +138,7 @@ void FMeshQuadTree::AddQuadtreeMesh(const TArray<FVector2D>& InPoly, const FBox&
 	const FVector2D ZBound = FVector2D(InMeshBounds.Min.Z, InMeshBounds.Max.Z);
 	// If we are at the leaf level, add the node
 	const FVector2D LeafSizeShrink(LeafSize * 0.25, LeafSize * 0.25);
-	// No more verts in this half box, mark as water
+	
 	const FBox TileBounds(FVector(MeshBounds.Min + LeafSizeShrink, ZBound.X), FVector(MeshBounds.Max - LeafSizeShrink, ZBound.Y));
 	AddQuadtreeMeshTilesInsideBounds(TileBounds, InQuadtreeMeshIndex);
 	
@@ -201,7 +199,7 @@ void FMeshQuadTree::BuildQuadtreeMeshTileInstanceData(const FTraversalDesc& InTr
 
 bool FMeshQuadTree::QueryInterpolatedTileBaseHeightAtLocation(const FVector2D& InWorldLocationXY,float& OutHeight) const
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(FWaterQuadTree::QueryInterpolatedTileBaseHeightAtLocation);
+	TRACE_CPUPROFILER_EVENT_SCOPE(FMeshQuadTree::QueryInterpolatedTileBaseHeightAtLocation);
 
 	// Figure out what 4 samples to take
 	// Sample point grid is aligned with center of leaf node tiles. So offset the grid negative half a leaf tile
@@ -238,7 +236,7 @@ bool FMeshQuadTree::QueryInterpolatedTileBaseHeightAtLocation(const FVector2D& I
 
 bool FMeshQuadTree::QueryTileBaseHeightAtLocation(const FVector2D& InWorldLocationXY, float& OutWorldHeight) const
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(FWaterQuadTree::QueryTileBaseHeightAtLocation);
+	TRACE_CPUPROFILER_EVENT_SCOPE(FMeshQuadTree::QueryTileBaseHeightAtLocation);
 	if (GetNodeCount() > 0)
 	{
 		check(bIsReadOnly);
@@ -470,7 +468,6 @@ void FMeshQuadTree::FNode::SelectLODWithinBounds(const FNodeData& InNodeData, in
 
 bool FMeshQuadTree::FNode::QueryBaseHeightAtLocation(const FNodeData& InNodeData, const FVector2D& InWorldLocationXY,float& OutHeight) const
 {
-	// Early out if subtree is complete and of same waterbody. 
 	// Note: Since we prune the quadtree of anything below this condition, it means there are no more granular nodes to fetch below this. In theory we could skip the pruning and have slightly more accurate height sampling, since rivers might have leaf nodes with individual bounds.
 	// Same condition as leaf nodes
 	if (HasCompleteSubtree && IsSubtreeSameQuadtreeMesh)
@@ -595,7 +592,7 @@ void FMeshQuadTree::FNode::AddNodes(FNodeData& InNodeData, const FBox& InMeshBou
 			// If INVALID_PARENT, compare against current since there are no previous children
 			PrevChildNode = (PrevChildNode.ParentIndex == INVALID_PARENT ? ChildNode : PrevChildNode);
 
-			// If the child doesn't have a subtree with same water bodies, then this node doesn't either
+			
 			if (ChildNode.IsSubtreeSameQuadtreeMesh == 0 || !ChildNode.CanMerge(PrevChildNode))
 			{
 				IsSubtreeSameQuadtreeMesh = 0;
@@ -610,7 +607,6 @@ void FMeshQuadTree::FNode::AddNodes(FNodeData& InNodeData, const FBox& InMeshBou
 		}
 		else
 		{
-			// If the child isn't allocated, this can not be a complete subtree. If an internal node doesn't have a complete subtree but has the same waterbody, that means it can be forcefully rendered
 			HasCompleteSubtree = 0;
 		}
 	}
@@ -643,7 +639,7 @@ void FMeshQuadTree::FNode::AddNodeForRender(const FNodeData& InNodeData,
 	StagingData.Data[0].X = TranslatedWorldPosition.X;
 	StagingData.Data[0].Y = TranslatedWorldPosition.Y;
 	StagingData.Data[0].Z = BaseHeightTWS;
-	//StagingData.Data[0].W = *(float*)&NodeWaterBodyIndex;
+	//StagingData.Data[0].W = *(float*)&NodeQuadtreeMeshIndex;
 	StagingData.Data[0].W = std::bit_cast<float>(NodeQuadtreeMeshIndex);
 
 	// Lowest LOD isn't always 0, this increases with the height distance 
