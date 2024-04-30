@@ -32,8 +32,11 @@ public:
 	TObjectPtr<UMaterialInterface> MeshMaterial;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuadtreeMesh")
-	FVector2D QuadtreeMeshExtent;
+	float QuadtreeMeshSize;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuadtreeMesh")
+	int32 LODLayer;
+	
 private:
 	bool bNeedInfoRebuild = false;
 
@@ -42,7 +45,7 @@ private:
 
 
 protected:
-	// Called when the game starts or when spawned
+	
 	virtual void BeginPlay() override;
 
 public:

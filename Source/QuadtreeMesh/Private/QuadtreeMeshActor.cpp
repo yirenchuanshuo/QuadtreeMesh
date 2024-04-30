@@ -8,7 +8,8 @@
 
 // Sets default values
 AQuadtreeMeshActor::AQuadtreeMeshActor()
-	:QuadtreeMeshExtent(FVector2D(2048.f,2048.f))
+	:QuadtreeMeshSize(2048.f),
+     LODLayer(4)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -41,9 +42,9 @@ void AQuadtreeMeshActor::BeginPlay()
 FBox2D AQuadtreeMeshActor::GetQuadtreeMeshBound2D() const
 {
 	const FVector2D QuadMeshActorLocation = FVector2D(GetActorLocation());
-	const FVector2D QuadMeshActorHalfExtent = QuadtreeMeshExtent / 2.0;
+	const FVector2D QuadMeshActorHalfExtent = FVector2D(QuadtreeMeshSize);
 	const FBox2D QuadMeshBounds(QuadMeshActorLocation - QuadMeshActorHalfExtent, QuadMeshActorLocation + QuadMeshActorHalfExtent);
-
+	
 	return QuadMeshBounds;
 }
 
@@ -138,7 +139,8 @@ void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	const FName PropertyName = PropertyChangedEvent.MemberProperty ? PropertyChangedEvent.MemberProperty->GetFName() : NAME_None;
-	if(PropertyName == GET_MEMBER_NAME_CHECKED(AQuadtreeMeshActor,QuadtreeMeshExtent))
+	if(PropertyName == GET_MEMBER_NAME_CHECKED(AQuadtreeMeshActor,QuadtreeMeshSize)
+	|| PropertyName == GET_MEMBER_NAME_CHECKED(AQuadtreeMeshActor,LODLayer))
 	{
 		OnExtentChanged();
 	}
@@ -154,7 +156,21 @@ void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 
 void AQuadtreeMeshActor::OnExtentChanged()
 {
-	QuadtreeMeshComponent->SetTileSize(QuadtreeMeshExtent.X);
+	QuadtreeMeshComponent->SetTileSize(QuadtreeMeshSize);
+	
+	
+	const FVector2D QuadtreeMeshExtent = FVector2D(QuadtreeMeshSize);
+	const float QuadtreeMeshTileSize = QuadtreeMeshSize/LODLayer;
+
+	int32 NewExtentInTilesX = FMath::FloorToInt(QuadtreeMeshExtent.X / QuadtreeMeshTileSize);
+	int32 NewExtentInTilesY = FMath::FloorToInt(QuadtreeMeshExtent.Y / QuadtreeMeshTileSize);
+	
+	// We must ensure that the zone is always at least 1x1
+	NewExtentInTilesX = FMath::Max(1, NewExtentInTilesX);
+	NewExtentInTilesY = FMath::Max(1, NewExtentInTilesY);
+
+	QuadtreeMeshComponent->SetExtentInTiles(FIntPoint(NewExtentInTilesX, NewExtentInTilesY));
+	
 	MarkForRebuild(EQuadtreeMeshRebuildFlags::All);
 }
 
