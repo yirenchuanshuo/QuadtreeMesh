@@ -1,5 +1,6 @@
 ﻿#include "QuadtreeMeshSceneProxy.h"
 #include "QuadtreeMeshComponent.h"
+#include "RenderGraphBuilder.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialRenderProxy.h"
 
