@@ -24,7 +24,7 @@ void FMeshQuadTree::InitTree(const FBox2D& InBounds, float InTileSize, FIntPoint
 
 	// Calculate the depth of the tree. This also corresponds to the LOD count. 0 means root is leaf node
 	// Find a pow2 tile resolution that contains the user defined extent in tiles
-	const int32 MaxDim = FMath::Max(InExtentInTiles.X * 2, InExtentInTiles.Y * 2);
+	const int32 MaxDim = FMath::Max(InExtentInTiles.X * 4, InExtentInTiles.Y * 4);
 	const float RootDim = static_cast<float>(FMath::RoundUpToPowerOfTwo(MaxDim));
 
 	TileRegion = InBounds;
@@ -630,8 +630,9 @@ void FMeshQuadTree::FNode::AddNodeForRender(const FNodeData& InNodeData,
 	
 	++Output.BucketInstanceCounts[BucketIndex];
 
-	FVector TranslatedWorldPosition(Bounds.GetCenter() + InTraversalDesc.PreViewTranslation);
-	TranslatedWorldPosition  = InQuadtreeMeshRenderData.LocalToWorld.TransformPosition(TranslatedWorldPosition);
+	FVector BoundsCenter = Bounds.GetCenter();
+	FVector TranslatedWorldPosition(BoundsCenter + InTraversalDesc.PreViewTranslation);
+	
 	
 	const FVector2D Scale(Bounds.GetSize());
 	FStagingInstanceData& StagingData = Output.StagingInstanceData[Output.StagingInstanceData.AddUninitialized()];

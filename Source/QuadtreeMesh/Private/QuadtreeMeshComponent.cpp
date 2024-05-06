@@ -5,6 +5,7 @@
 #include "EngineUtils.h"
 #include "QuadtreeMeshActor.h"
 #include "QuadtreeMeshRender.h"
+#include "Chaos/ImplicitObjectBVH.h"
 #include "Engine/TextureRenderTarget2D.h"
 
 
@@ -172,16 +173,19 @@ FBoxSphereBounds UQuadtreeMeshComponent::CalcBounds(const FTransform& LocalToWor
 void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoint& InExtentInTiles)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(RebuildQuadtreeMesh);
+	FVector Scale = GetComponentScale();
 	// Position snapped to the grid
-	const FVector2D GridPosition = FVector2D(FMath::GridSnap<FVector::FReal>(GetComponentLocation().X, InTileSize), FMath::GridSnap<FVector::FReal>(GetComponentLocation().Y, InTileSize));
+	FVector2D GridPosition = FVector2D(FMath::GridSnap<FVector::FReal>(GetComponentLocation().X, InTileSize), FMath::GridSnap<FVector::FReal>(GetComponentLocation().Y, InTileSize));
+	//GridPosition = GridPosition.GetRotated(RotationAngleRad);
+	
 	const FVector2D WorldExtent = FVector2D(InTileSize * InExtentInTiles.X, InTileSize * InExtentInTiles.Y);
 
 	const FBox2D MeshWorldBox = FBox2D(-WorldExtent + GridPosition, WorldExtent + GridPosition);
 	MeshQuadTree.InitTree(MeshWorldBox,InTileSize, InExtentInTiles);
 
 	
-	
-	const float QuadtreeMeshHeight = GetComponentLocation().Z;
+	FVector ComponentLocation = GetComponentLocation();
+	const float QuadtreeMeshHeight = ComponentLocation.Z;
 	
 	FQuadtreeMeshRenderData RenderData;
 	if(!ShouldRender())
@@ -190,7 +194,6 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 	}
 	RenderData.Material = OverrideMaterials[0];
 	RenderData.SurfaceBaseHeight = QuadtreeMeshHeight;
-	RenderData.LocalToWorld = this->GetComponentTransform().ToMatrixWithScale();
 	
 	AQuadtreeMeshActor* QuadtreeMeshOwner = GetOwner<AQuadtreeMeshActor>();
 
@@ -200,11 +203,12 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 
 	const uint32 QuadtreeMeshRenderDataIndex = MeshQuadTree.AddQuadtreeMeshRenderData(RenderData);
 	FBox Bound;
-	Bound.Max = FVector(InTileSize,InTileSize,0.0f);
-	Bound.Min = FVector(-InTileSize,-InTileSize,0.0f);
+	Bound.Max = FVector(InTileSize*Scale.X+GridPosition.X,InTileSize*Scale.Y+GridPosition.Y,0.0f);
+	Bound.Min = FVector(-InTileSize*Scale.X+GridPosition.X,-InTileSize*Scale.Y+GridPosition.Y,0.0f);
 	
-	const FBox OceanBounds = Bound;
-	MeshQuadTree.AddQuadtreeMeshTilesInsideBounds(OceanBounds, QuadtreeMeshRenderDataIndex);
+	
+	const FBox MeshBounds = Bound;
+	MeshQuadTree.AddQuadtreeMeshTilesInsideBounds(MeshBounds, QuadtreeMeshRenderDataIndex);
 	MeshQuadTree.Unlock(true);
 	MarkRenderStateDirty();
 }

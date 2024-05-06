@@ -150,6 +150,15 @@ void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 		QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
 		QuadtreeMeshComponent->MarkRenderStateDirty();
 	}
+	static const FName Name_RelativeLocation = USceneComponent::GetRelativeLocationPropertyName();
+	static const FName Name_RelativeRotation = USceneComponent::GetRelativeRotationPropertyName();
+	static const FName Name_RelativeScale3D = USceneComponent::GetRelativeScale3DPropertyName();
+	
+	if(const bool bTransformationChanged =
+		(PropertyName == Name_RelativeLocation || PropertyName == Name_RelativeRotation || PropertyName == Name_RelativeScale3D))
+	{
+		MarkForRebuild(EQuadtreeMeshRebuildFlags::All);
+	}
 	
 }
 #endif

@@ -10,7 +10,6 @@ struct FQuadtreeMeshRenderData
 {
 	UMaterialInterface* Material = nullptr;
 	double SurfaceBaseHeight = 0.0;
-	FMatrix LocalToWorld = FMatrix::Identity;
 	int16 MaterialIndex = INDEX_NONE;
 	
 	/** Hit proxy for this QUADTREEMESH */
