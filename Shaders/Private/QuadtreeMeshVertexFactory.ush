@@ -279,7 +279,6 @@ half3x3 VertexFactoryGetTangentToLocal( FVertexFactoryInput Input, FVertexFactor
 
 float4 VertexFactoryGetWorldPosition(FVertexFactoryInput Input, FVertexFactoryIntermediates Intermediates)
 {
-	FLWCMatrix LocalToWorld = GetInstanceData(Intermediates).LocalToWorld;
 	return float4(Intermediates.MorphedTranslatedWorldPos, 1);
 }
 

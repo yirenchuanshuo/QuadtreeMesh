@@ -630,7 +630,9 @@ void FMeshQuadTree::FNode::AddNodeForRender(const FNodeData& InNodeData,
 	
 	++Output.BucketInstanceCounts[BucketIndex];
 
-	const FVector TranslatedWorldPosition(Bounds.GetCenter() + InTraversalDesc.PreViewTranslation);
+	FVector TranslatedWorldPosition(Bounds.GetCenter() + InTraversalDesc.PreViewTranslation);
+	TranslatedWorldPosition  = InQuadtreeMeshRenderData.LocalToWorld.TransformPosition(TranslatedWorldPosition);
+	
 	const FVector2D Scale(Bounds.GetSize());
 	FStagingInstanceData& StagingData = Output.StagingInstanceData[Output.StagingInstanceData.AddUninitialized()];
 

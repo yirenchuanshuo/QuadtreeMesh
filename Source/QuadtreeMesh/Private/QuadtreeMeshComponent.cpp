@@ -190,6 +190,7 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 	}
 	RenderData.Material = OverrideMaterials[0];
 	RenderData.SurfaceBaseHeight = QuadtreeMeshHeight;
+	RenderData.LocalToWorld = this->GetComponentTransform().ToMatrixWithScale();
 	
 	AQuadtreeMeshActor* QuadtreeMeshOwner = GetOwner<AQuadtreeMeshActor>();
 
