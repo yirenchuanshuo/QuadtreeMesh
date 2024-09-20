@@ -1,5 +1,7 @@
 ﻿#include "QuadtreeMeshSceneProxy.h"
 #include "QuadtreeMeshComponent.h"
+#include "QuadtreeMeshViewExtension.h"
+#include "RayTracingInstance.h"
 #include "RenderGraphBuilder.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialRenderProxy.h"
@@ -19,7 +21,7 @@ SIZE_T FQuadtreeMeshSceneProxy::GetTypeHash() const
 
 FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Component)
 	:FPrimitiveSceneProxy(Component),
-	 MaterialRelevance(Component->GetMaterialRelevance(GetScene().GetFeatureLevel())),
+	 MaterialRelevance(Component->GetQuadtreeMeshMaterialRelevance(GetScene().GetFeatureLevel())),
 	 bIsVisble(Component->IsVisible())
 {
 	
@@ -91,19 +93,45 @@ FQuadtreeMeshSceneProxy::~FQuadtreeMeshSceneProxy()
 #endif
 }
 
+void FQuadtreeMeshSceneProxy::CreateRenderThreadResources(FRHICommandListBase& RHICmdList)
+{
+	SceneProxyCreatedFrameNumberRenderThread = GFrameNumberRenderThread;
+
+	if (MeshQuadTree.IsGPUQuadTree())
+	{
+		FQuadtreeMeshGPUWork::FCallback Callback;
+		Callback.Proxy = this;
+		Callback.Function = [this](FRDGBuilder& GraphBuilder, bool bDepthBufferIsPopulated)
+		{
+			/*if (bNeedToTraverseGPUQuadTree)
+			{
+				if (!QuadTreeGPU.IsInitialized())
+				{
+					BuildGPUQuadTree(GraphBuilder);
+				}
+				FWaterQuadTreeGPU::FTraverseParams TraverseParams = MoveTemp(WaterQuadTreeGPUTraverseParams);
+				TraverseParams.bDepthBufferIsPopulated = bDepthBufferIsPopulated;
+				QuadTreeGPU.Traverse(GraphBuilder, TraverseParams);
+				bNeedToTraverseGPUQuadTree = false;
+				WaterQuadTreeGPUTraverseParams = {};
+			}*/
+		};
+		//GWaterMeshGPUWork.Callbacks.Add(MoveTemp(Callback));
+	}
+}
+
 void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneView*>& Views,
-	const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const
+                                                     const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const
 {
 	CSV_SCOPED_TIMING_STAT_EXCLUSIVE(QuadtreeMesh);
 	TRACE_CPUPROFILER_EVENT_SCOPE(FQuadtreeMeshSceneProxy::GetDynamicMeshElements);
-	checkSlow(IsInRenderingThread());
 
 	if(!bIsVisble)
 	{
 		return;
 	}
 	
-	FRHICommandListBase& RHICmdList = FRHICommandListImmediate::Get();
+	FRHICommandListBase& RHICmdList = Collector.GetRHICommandList();
 
 	// The water render groups we have to render for this batch : 
 	TArray<EQuadtreeMeshRenderGroupType, TInlineAllocator<FQuadtreeMeshVertexFactory::NumRenderGroups>> BatchRenderGroups;
@@ -120,7 +148,6 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 		BatchRenderGroups[0] = EQuadtreeMeshRenderGroupType::RG_RenderSelectedQuadtreeMeshTilesOnly;
 		BatchRenderGroups.Add(EQuadtreeMeshRenderGroupType::RG_RenderUnselectedQuadtreeMeshTilesOnly);
 	}
-
 
 	if (!HasQuadtreeData())
 	{
@@ -185,11 +212,10 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 			TraversalDesc.TessellatedQuadtreeMeshBounds = TessellatedQuadtreeMeshBounds;
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			//Debug
 			TraversalDesc.DebugPDI = Collector.GetPDI(ViewIndex);
 #endif
 			MeshQuadTree.BuildQuadtreeMeshTileInstanceData(TraversalDesc, QuadtreeMeshInstanceData);
-
+			
 			HistoricalMaxViewInstanceCount = FMath::Max(HistoricalMaxViewInstanceCount, QuadtreeMeshInstanceData.InstanceCount);
 		}
 	}
@@ -296,7 +322,7 @@ void FQuadtreeMeshSceneProxy::GetDynamicMeshElements(const TArray<const FSceneVi
 							BatchElement.MaxVertexIndex = QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetVertexCount() - 1;
 
 							BatchElement.IndexBuffer = QuadtreeMeshVertexFactories[DensityIndex]->IndexBuffer;
-							//BatchElement.PrimitiveIdMode = PrimID_ForceZero;
+							BatchElement.PrimitiveIdMode = PrimID_ForceZero;
 
 							// We need the uniform buffer of this primitive because it stores the proper value for the bOutputVelocity flag.
 							// The identity primitive uniform buffer simply stores false for this flag which leads to missing motion vectors.
@@ -374,10 +400,7 @@ void FQuadtreeMeshSceneProxy::OnTessellatedQuadtreeMeshBoundsChanged_GameThread(
 		});
 }
 
-void FQuadtreeMeshSceneProxy::OnTransformChanged()
-{
-	FPrimitiveSceneProxy::OnTransformChanged();
-}
+
 
 void FQuadtreeMeshSceneProxy::OnTessellatedQuadtreeMeshBoundsChanged_RenderThread(
 	const FBox2D& InTessellatedWaterMeshBounds)
@@ -546,9 +569,9 @@ void FQuadtreeMeshSceneProxy::GetDynamicRayTracingInstances(FRayTracingMaterialG
 					{
 						RayTracingInstance.Materials,
 						false,
-						uint32(QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetVertexCount()),
-						uint32(QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetVertexCount() * sizeof(FVector3f)),
-						uint32(QuadtreeMeshVertexFactories[DensityIndex]->IndexBuffer->GetIndexCount() / 3),
+						static_cast<uint32>(QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetVertexCount()),
+						static_cast<uint32>(QuadtreeMeshVertexFactories[DensityIndex]->VertexBuffer->GetVertexCount() * sizeof(FVector3f)),
+						static_cast<uint32>(QuadtreeMeshVertexFactories[DensityIndex]->IndexBuffer->GetIndexCount() / 3),
 						&QuadtreeMeshInstanceRayTracingData.Geometry,
 						nullptr,
 						true

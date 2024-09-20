@@ -89,7 +89,7 @@ public:
 		 *	Initialize the tree. This will unlock the tree for node insertion using AddWaterTilesInsideBounds(...). 
 		 *	Tree must be locked before traversal, see Lock(). 
 		 */
-	void InitTree(const FBox2D& InBounds, float InTileSize, FIntPoint InExtentInTiles);
+	void InitTree(const FBox2D& InBounds, float InTileSize, FIntPoint InExtentInTiles,bool bInIsGPUQuadTree);
 	/** Unlock to make it read-only. This will optionally prune the node array to remove redundant nodes, nodes that can be implicitly traversed */
 	void Unlock(bool bPruneRedundantNodes);
 	/** Add tiles that intersect InBounds recursively from the root node. Tree must be unlocked. Typically called on Game Thread */
@@ -109,6 +109,8 @@ public:
 	
 	/** Walks down the tree and returns the tile bounds at InWorldLocationXY in OutWorldBounds. Returns true if the query finds a leaf tile to return, otherwise false. */
 	bool QueryTileBoundsAtLocation(const FVector2D& InWorldLocationXY, FBox& OutWorldBounds) const;
+
+	bool IsGPUQuadTree() const { return bIsGPUQuadTree; }
 
 	/** Add water body render data to this tree. Returns the index in the array. Use this index to add tiles with this water body to the tree, see AddWaterTilesInsideBounds(..) */
 	uint32 AddQuadtreeMeshRenderData(const FQuadtreeMeshRenderData& InQuadtreeMeshRenderData) { return NodeData.QuadtreeMeshRenderData.Add(InQuadtreeMeshRenderData); }
@@ -150,6 +152,7 @@ private:
 	TArray<FMaterialRenderProxy*> QuadtreeMeshMaterials;
 
 	bool bIsReadOnly = true;
+	bool bIsGPUQuadTree = false;
 
 	
 	struct FNodeData;

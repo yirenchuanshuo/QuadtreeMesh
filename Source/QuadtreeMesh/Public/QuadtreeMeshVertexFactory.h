@@ -152,7 +152,7 @@ enum class EQuadtreeMeshRenderGroupType : uint8
 
 class FQuadtreeMeshVertexFactory : public FVertexFactory
 {
-	DECLARE_VERTEX_FACTORY_TYPE(FQuadtreeMeshVertexFactory<bWithQuadtreeMeshSelectionSupport>);
+	DECLARE_VERTEX_FACTORY_TYPE(FQuadtreeMeshVertexFactory);
 public:
 	using Super = FVertexFactory;
 	static constexpr int32 NumRenderGroups =  3 ; // Must match EWaterMeshRenderGroupType
@@ -168,10 +168,12 @@ public:
 	static bool ShouldCompilePermutation(const FVertexFactoryShaderPermutationParameters& Parameters);
 
 	static void ModifyCompilationEnvironment(const FVertexFactoryShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
+	
+	static void ValidateCompiledResult(const FVertexFactoryType* Type, EShaderPlatform Platform, const FShaderParameterMap& ParameterMap, TArray<FString>& OutErrors);
 
 	static void GetPSOPrecacheVertexFetchElements(EVertexInputStreamType VertexInputStreamType, FVertexDeclarationElementList& Elements);
-
-	inline const FUniformBufferRHIRef GeFQuadtreeMeshVertexFactoryUniformBuffer(EQuadtreeMeshRenderGroupType InRenderGroupType) const { return UniformBuffers[static_cast<int32>(InRenderGroupType)]; }
+	
+	const FUniformBufferRHIRef GeFQuadtreeMeshVertexFactoryUniformBuffer(EQuadtreeMeshRenderGroupType InRenderGroupType) const { return UniformBuffers[static_cast<int32>(InRenderGroupType)]; }
 
 private:
 	void SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType InRenderGroupType);
@@ -227,5 +229,5 @@ struct FQuadtreeMeshUserDataBuffers
 	TStaticArray<TUniquePtr<FQuadtreeMeshUserData>, FQuadtreeMeshVertexFactory::NumRenderGroups> UserData;
 };
 
-#include "QuadtreeMeshVertexFactory.inl"
+
 

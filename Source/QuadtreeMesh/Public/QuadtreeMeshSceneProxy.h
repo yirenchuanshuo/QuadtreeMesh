@@ -17,7 +17,9 @@ public:
 	SIZE_T GetTypeHash() const override;
 
 	FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Component);
-	virtual ~FQuadtreeMeshSceneProxy();
+	virtual ~FQuadtreeMeshSceneProxy()override;
+
+	virtual void CreateRenderThreadResources(FRHICommandListBase& RHICmdList) override;
 
 	virtual uint32 GetMemoryFootprint() const override
 	{
@@ -40,7 +42,7 @@ public:
 
 	void OnTessellatedQuadtreeMeshBoundsChanged_GameThread(const FBox2D& InTessellatedWaterMeshBounds);
 
-	virtual void OnTransformChanged() override;
+	
 
 #if WITH_EDITOR
 	virtual HHitProxy* CreateHitProxies(UPrimitiveComponent* Component, TArray<TRefCountPtr<HHitProxy> >& OutHitProxies) override;
@@ -96,6 +98,8 @@ private:
 	FQuadtreeMeshUserDataBuffers* QuadtreeMeshUserDataBuffers;
 
 	FBox2D TessellatedQuadtreeMeshBounds = FBox2D(ForceInit);
+
+	uint32 SceneProxyCreatedFrameNumberRenderThread = INDEX_NONE;
 
 	int32 ForceCollapseDensityLevel = TNumericLimits<int32>::Max();
 

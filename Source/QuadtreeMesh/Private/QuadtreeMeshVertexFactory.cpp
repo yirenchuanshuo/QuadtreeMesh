@@ -1,4 +1,6 @@
 ﻿#include "QuadtreeMeshVertexFactory.h"
+#include "DataDrivenShaderPlatformInfo.h"
+#include "MaterialDomain.h"
 #include "MeshDrawShaderBindings.h"
 #include "MeshBatch.h"
 #include "MeshMaterialShader.h"
@@ -11,7 +13,6 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FQuadtreeMeshVertexFactoryRaytracingPar
 class FQuadtreeMeshVertexFactoryShaderParameters : public FVertexFactoryShaderParameters
 {
 	DECLARE_TYPE_LAYOUT(FQuadtreeMeshVertexFactoryShaderParameters, NonVirtual);
-
 public:
 
 	void Bind(const FShaderParameterMap& ParameterMap)
@@ -35,7 +36,7 @@ public:
 
 		const  FQuadtreeMeshInstanceDataBuffers* InstanceDataBuffers = QuadtreeMeshUserData->InstanceDataBuffers;
 
-		const int32 InstanceOffsetValue = BatchElement.UserIndex;
+		
 
 		ShaderBindings.Add(Shader->GetUniformBufferParameter<FQuadtreeMeshVertexFactoryParameters>(), VertexFactory->GeFQuadtreeMeshVertexFactoryUniformBuffer(QuadtreeMeshUserData->RenderGroupType));
 
@@ -57,13 +58,159 @@ public:
 				check(InstanceDataBuffers->GetBuffer(i));
 				InstanceInputStream->VertexBuffer = InstanceDataBuffers->GetBuffer(i);
 			}
-
+			const int32 InstanceOffsetValue = BatchElement.UserIndex;
 			if (InstanceOffsetValue > 0)
 			{
 				VertexFactory->OffsetInstanceStreams(InstanceOffsetValue, InputStreamType, VertexStreams);
 			}
 		}
 	}
+};
+
+FQuadtreeMeshVertexFactory::FQuadtreeMeshVertexFactory(ERHIFeatureLevel::Type InFeatureLevel, int32 InNumQuadsPerSide, float InLODScale)
+	: FVertexFactory(InFeatureLevel)
+	, NumQuadsPerSide(InNumQuadsPerSide)
+	, LODScale(InLODScale)
+{
+	VertexBuffer = new FQuadtreeMeshVertexBuffer(NumQuadsPerSide);
+	IndexBuffer = new FQuadtreeMeshIndexBuffer(NumQuadsPerSide);
+}
+
+
+FQuadtreeMeshVertexFactory::~FQuadtreeMeshVertexFactory()
+{
+	delete VertexBuffer;
+	delete IndexBuffer;
+}
+
+
+void FQuadtreeMeshVertexFactory::InitRHI(FRHICommandListBase& RHICmdList)
+{
+	Super::InitRHI(RHICmdList);
+
+	// Setup the uniform data:
+	SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType::RG_RenderQuadtreeMeshTiles);
+
+	SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType::RG_RenderSelectedQuadtreeMeshTilesOnly);
+	SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType::RG_RenderUnselectedQuadtreeMeshTilesOnly);
+
+
+	VertexBuffer->InitResource(RHICmdList);
+	IndexBuffer->InitResource(RHICmdList);
+
+	check(Streams.Num() == 0);
+
+	FVertexStream PositionVertexStream;
+	PositionVertexStream.VertexBuffer = VertexBuffer;
+	PositionVertexStream.Stride = sizeof(FVector4f);
+	PositionVertexStream.Offset = 0;
+	PositionVertexStream.VertexStreamUsage = EVertexStreamUsage::Default;
+	
+	FVertexElement VertexPositionElement(Streams.Add(PositionVertexStream), 0, VET_Float4, 0, PositionVertexStream.Stride, false);
+
+	// Vertex declaration
+	FVertexDeclarationElementList Elements;
+	Elements.Add(VertexPositionElement);
+
+	if constexpr(NumAdditionalVertexStreams>0)
+	{
+		// Simple instancing vertex stream with nullptr vertex buffer to be set at binding time
+		FVertexStream InstanceDataVertexStream;
+		InstanceDataVertexStream.VertexBuffer = nullptr;
+		InstanceDataVertexStream.Stride = sizeof(FVector4f);
+		InstanceDataVertexStream.Offset = 0;
+		InstanceDataVertexStream.VertexStreamUsage = EVertexStreamUsage::Instancing;
+
+		// Adds all streams
+	
+		for (int32 StreamIdx = 0; StreamIdx < NumAdditionalVertexStreams; ++StreamIdx)
+		{
+			FVertexElement InstanceElement(Streams.Add(InstanceDataVertexStream), 0, VET_Float4, 8 + StreamIdx, InstanceDataVertexStream.Stride, true);
+			Elements.Add(InstanceElement);
+		}
+	}
+	InitDeclaration(Elements);
+}
+
+
+void FQuadtreeMeshVertexFactory::ReleaseRHI()
+{
+	for (auto& UniformBuffer : UniformBuffers)
+	{
+		UniformBuffer.SafeRelease();
+	}
+
+	if (VertexBuffer)
+	{
+		VertexBuffer->ReleaseResource();
+	}
+
+	if (IndexBuffer)
+	{
+		IndexBuffer->ReleaseResource();
+	}
+
+	Super::ReleaseRHI();
+}
+
+
+void FQuadtreeMeshVertexFactory::SetupUniformDataForGroup(EQuadtreeMeshRenderGroupType InRenderGroupType)
+{
+	FQuadtreeMeshVertexFactoryParameters UniformParams;
+	UniformParams.NumQuadsPerTileSide = NumQuadsPerSide;
+	UniformParams.LODScale = LODScale;
+	UniformParams.bRenderSelected = (InRenderGroupType != EQuadtreeMeshRenderGroupType::RG_RenderUnselectedQuadtreeMeshTilesOnly);
+	UniformParams.bRenderUnselected = (InRenderGroupType != EQuadtreeMeshRenderGroupType::RG_RenderSelectedQuadtreeMeshTilesOnly);
+	UniformBuffers[static_cast<int32>(InRenderGroupType)] = FQuadtreeMeshVertexFactoryBufferRef::CreateUniformBufferImmediate(UniformParams, UniformBuffer_MultiFrame);
+}
+
+
+bool FQuadtreeMeshVertexFactory::ShouldCompilePermutation(const FVertexFactoryShaderPermutationParameters& Parameters)
+{
+	const bool bIsCompatibleWithQuadtreeMesh = Parameters.MaterialParameters.MaterialDomain == MD_Surface || Parameters.MaterialParameters.bIsSpecialEngineMaterial;
+	if (bIsCompatibleWithQuadtreeMesh)
+	{
+		return IsPCPlatform(Parameters.Platform);
+	}
+	return false;
+}
+
+
+void FQuadtreeMeshVertexFactory::ModifyCompilationEnvironment(const FVertexFactoryShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+{
+	OutEnvironment.SetDefine(TEXT("QUADTREE_MESH_FACTORY"), 1);
+	OutEnvironment.SetDefine(TEXT("USE_VERTEXFACTORY_HITPROXY_ID"), TEXT("1"));
+	OutEnvironment.SetDefine(TEXT("RAY_TRACING_DYNAMIC_MESH_IN_LOCAL_SPACE"), TEXT("1"));
+}
+
+
+
+
+void FQuadtreeMeshVertexFactory::GetPSOPrecacheVertexFetchElements(EVertexInputStreamType VertexInputStreamType, FVertexDeclarationElementList& Elements)
+{
+	// Add position stream
+	Elements.Add(FVertexElement(0, 0, VET_Float4, 0, sizeof(FVector4f), false));
+
+	// Add all the additional streams
+	if constexpr(NumAdditionalVertexStreams>0)
+	{
+		for (int32 StreamIdx = 0; StreamIdx < NumAdditionalVertexStreams; ++StreamIdx)
+		{
+			Elements.Add(FVertexElement(1 + StreamIdx, 0, VET_Float4, 8 + StreamIdx, sizeof(FVector4f), true));
+		}
+	}
+	
+}
+
+void FQuadtreeMeshVertexFactory::ValidateCompiledResult(const FVertexFactoryType* Type, EShaderPlatform Platform,
+	const FShaderParameterMap& ParameterMap, TArray<FString>& OutErrors)
+{
+	/*if (Type->SupportsPrimitiveIdStream()
+		&& UseGPUScene(Platform, GetMaxSupportedFeatureLevel(Platform))
+		&& ParameterMap.ContainsParameterAllocation(FPrimitiveUniformShaderParameters::FTypeInfo::GetStructMetadata()->GetShaderVariableName()))
+	{
+		OutErrors.AddUnique(*FString::Printf(TEXT("Shader attempted to bind the Primitive uniform buffer even though Vertex Factory %s computes a PrimitiveId per-instance.  This will break auto-instancing.  Shaders should use GetPrimitiveData(Parameters).Member instead of Primitive.Member."), Type->GetName()));
+	}*/
 };
 
 
@@ -81,15 +228,16 @@ IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(FQuadtreeMeshVertexFactory, SF_Compute, 
 IMPLEMENT_VERTEX_FACTORY_PARAMETER_TYPE(FQuadtreeMeshVertexFactory, SF_RayHitGroup, FQuadtreeMeshVertexFactoryShaderParameters);
 #endif
 IMPLEMENT_VERTEX_FACTORY_TYPE(FQuadtreeMeshVertexFactory, "/Plugin/QuadtreeMesh/Private/QuadtreeMeshVertexFactory.ush",
-      EVertexFactoryFlags::UsedWithMaterials
-	| EVertexFactoryFlags::SupportsDynamicLighting
-	| EVertexFactoryFlags::SupportsCachingMeshDrawCommands
-	| EVertexFactoryFlags::SupportsRayTracing
-	| EVertexFactoryFlags::SupportsRayTracingDynamicGeometry
-	| EVertexFactoryFlags::SupportsPrimitiveIdStream
-	| EVertexFactoryFlags::SupportsPSOPrecaching
-	| EVertexFactoryFlags::SupportsLumenMeshCards
-	);
+	EVertexFactoryFlags::UsedWithMaterials
+   | EVertexFactoryFlags::SupportsDynamicLighting				
+   | EVertexFactoryFlags::SupportsPrecisePrevWorldPos
+   | EVertexFactoryFlags::SupportsPrimitiveIdStream
+   | EVertexFactoryFlags::SupportsRayTracing
+   | EVertexFactoryFlags::SupportsRayTracingDynamicGeometry
+   | EVertexFactoryFlags::SupportsPSOPrecaching
+	)
+
+
 
 
 

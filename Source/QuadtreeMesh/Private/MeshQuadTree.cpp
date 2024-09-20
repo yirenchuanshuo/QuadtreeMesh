@@ -10,12 +10,14 @@ void FMeshQuadTree::GatherHitProxies(TArray<TRefCountPtr<HHitProxy>>& OutHitProx
 	}
 }
 
-void FMeshQuadTree::InitTree(const FBox2D& InBounds, float InTileSize, FIntPoint InExtentInTiles)
+void FMeshQuadTree::InitTree(const FBox2D& InBounds, float InTileSize, FIntPoint InExtentInTiles,bool bInIsGPUQuadTree)
 {
 	ensure(InBounds.GetArea() > 0.0f);
 	ensure(InTileSize > 0.0f);
 	ensure(InExtentInTiles.X > 0);
 	ensure(InExtentInTiles.Y > 0);
+
+	bIsGPUQuadTree = bInIsGPUQuadTree;
 
 	// Maximum number of allocated leaf nodes for this config
 	MaxLeafCount = InExtentInTiles.X*InExtentInTiles.Y*4;
@@ -31,7 +33,14 @@ void FMeshQuadTree::InitTree(const FBox2D& InBounds, float InTileSize, FIntPoint
 
 	// Allocate theoretical max, shrink later in Lock()
 	// This is so that the node array doesn't move in memory while inserting
-	NodeData.Nodes.Empty(FMath::Square(RootDim) * 4 / 3.0f);
+	if (!bIsGPUQuadTree)
+	{
+		NodeData.Nodes.Empty((float)(FMath::Square(RootDim) * 4) / 3.0f);
+	}
+	else
+	{
+		NodeData.Nodes.Empty(1);
+	}
 	
 	NodeData.QuadtreeMeshRenderData.Empty(1);
 	NodeData.QuadtreeMeshRenderData.AddDefaulted();
@@ -128,6 +137,7 @@ void FMeshQuadTree::Unlock(bool bPruneRedundantNodes)
 void FMeshQuadTree::AddQuadtreeMeshTilesInsideBounds(const FBox& InBounds, uint32 InQuadtreeMeshIndex)
 {
 	check(!bIsReadOnly);
+	check(!bIsGPUQuadTree);
 	NodeData.Nodes[0].AddNodes(NodeData, FBox(FVector(TileRegion.Min, 0.0f), FVector(TileRegion.Max, 0.0f)),  InBounds, InQuadtreeMeshIndex, TreeDepth, 0);
 }
 
@@ -187,11 +197,8 @@ void FMeshQuadTree::BuildQuadtreeMeshTileInstanceData(const FTraversalDesc& InTr
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(BuildQuadtreeMeshTileInstanceData);
 	check(bIsReadOnly);
-	if (InTraversalDesc.TessellatedQuadtreeMeshBounds.bIsValid)
-	{
-		NodeData.Nodes[0].SelectLODWithinBounds(NodeData, TreeDepth, InTraversalDesc, Output);
-	}
-	else
+	
+	if (!bIsGPUQuadTree)
 	{
 		NodeData.Nodes[0].SelectLOD(NodeData, TreeDepth, InTraversalDesc, Output);
 	}

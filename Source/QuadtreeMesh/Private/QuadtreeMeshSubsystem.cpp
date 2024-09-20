@@ -14,6 +14,7 @@ bool UQuadtreeMeshSubsystem::bAllowQuadtreeMeshSubsystemOnPreviewWorld = false;
 
 UQuadtreeMeshSubsystem::UQuadtreeMeshSubsystem()
 {
+	
 }
 
 void UQuadtreeMeshSubsystem::Tick(float DeltaTime)

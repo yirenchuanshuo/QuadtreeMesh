@@ -1,8 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-#include "CoreMinimal.h"
-#include "Runtime/Engine/Classes/Components/MeshComponent.h"
+#include "Components/MeshComponent.h"
 #include "MeshQuadTree.h"
 #include "QuadtreeMeshComponent.generated.h"
 
@@ -55,7 +54,7 @@ public:
 	
 	void PushTessellatedQuadtreeMeshBoundsToPoxy(const FBox2D& TessellatedWaterMeshBounds)const;
 	
-	virtual void CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams, FComponentPSOPrecacheParamsList& OutParams) override;
+	virtual void CollectPSOPrecacheData(const FPSOPrecacheParams& BasePrecachePSOParams, FMaterialInterfacePSOPrecacheParamsList& OutParams) override;
 
 	void Update();
 
@@ -76,7 +75,7 @@ public:
 
 	float GetTileSize() const { return TileSize; }
 
-	FMaterialRelevance GetWaterMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const;
+	FMaterialRelevance GetQuadtreeMeshMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const;
 
 	float GetLODScale() const { return LODScale; }
 
