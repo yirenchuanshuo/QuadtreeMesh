@@ -107,6 +107,9 @@ private:
 
 	int32 DensityCount = 0;
 
+	double MeshQuadTreeMinHeight = DBL_MAX;
+	double MeshQuadTreeMaxHeight = -DBL_MAX;
+
 	mutable int32 HistoricalMaxViewInstanceCount = 0;
 
 	bool bIsVisble;

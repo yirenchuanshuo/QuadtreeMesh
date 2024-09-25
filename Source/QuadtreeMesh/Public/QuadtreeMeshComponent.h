@@ -21,7 +21,7 @@ public:
 	UQuadtreeMeshComponent();
 
 	//UFUNCTION(BlueprintCallable, Category = "QuadtreeMesh")
-	
+	//UE_DECLARE_COMPONENT_ACTOR_INTERFACE(QuadtreeMeshComponent)
 
 public:
 	
@@ -60,9 +60,15 @@ public:
 
 	FVector GetDynamicQuadtreeMeshExtent()const;
 
-	void SetExtentInTiles(FIntPoint NewExtentInTiles);
+	void SetExtentInTiles();
 
 	void SetTileSize(float NewTileSize);
+
+	void SetLODLayer(int32 NewLODLayer);
+
+	void SetTessellationFactor(int32 NewFactor);
+
+	void SetMeshMaterial(UMaterialInterface* NewMaterial);
 	
 	FIntPoint GetExtentInTiles() const { return ExtentInTiles; }
 	
@@ -99,26 +105,31 @@ public:
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "-1"))
 	int32 ForceCollapseDensityLevel = -1;
 
-	UPROPERTY()
-	TObjectPtr<UMaterialInterface> MeshDefaultMaterial;
+	UPROPERTY(EditAnywhere, Category = Rendering)
+	TObjectPtr<UMaterialInterface> MeshMaterial;
 
 private:
 	/** World size of the QuadtreeMesh tiles at LOD0. Multiply this with the ExtentInTiles to get the world extents of the system */
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "100", AllowPrivateAcces = "true"))
-	float TileSize = 4096.f;
+	float TileSize;
 
 	/** The extent of the QuadtreeMesh in number of tiles. Maximum number of tiles for this system will be ExtentInTiles.X*2*ExtentInTiles.Y*2 */
-	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "1", AllowPrivateAcces = "true"))
-	FIntPoint ExtentInTiles = FIntPoint(64, 64);
+	UPROPERTY(Transient, VisibleAnywhere, Category = Rendering)
+	FIntPoint ExtentInTiles;
 
 	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "0.5"))
-	float LODScale = 1.0f;
+	float LODScale;
+
+	UPROPERTY(EditAnywhere, Category = Rendering, meta = (ClampMin = "0"))
+	int32 LODLayer;
 	
 	FMeshQuadTree MeshQuadTree;
 
 	TSharedPtr<FQuadtreeMeshViewExtension> QuadtreeMeshViewExtension;
 
 	bool bNeedsRebuild = true;
+
+	bool bIsInit = true;
 
 	FVector2f MeshHeightExtents;
 	

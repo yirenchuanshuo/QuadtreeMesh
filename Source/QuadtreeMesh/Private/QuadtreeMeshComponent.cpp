@@ -5,10 +5,11 @@
 #include "DataDrivenShaderPlatformInfo.h"
 #include "QuadtreeMeshSceneProxy.h"
 #include "EngineUtils.h"
+#include "MaterialDomain.h"
+#include "PSOPrecacheMaterial.h"
 #include "QuadtreeMeshActor.h"
-#include "QuadtreeMeshRender.h"
 #include "Chaos/ImplicitObjectBVH.h"
-#include "Engine/TextureRenderTarget2D.h"
+
 
 
 // Sets default values for this component's properties
@@ -16,8 +17,23 @@ UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 {
 	bAutoActivate = true;
 	bHasPerInstanceHitProxies = true;
-	// ...DefaultMaterialName
+	
 	SetMobility(EComponentMobility::Static);
+	struct FConstructorStatics
+	{
+		ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultMaterial;
+		FConstructorStatics():
+			DefaultMaterial(TEXT("/Engine/EngineMaterials/WorldGridMaterial.WorldGridMaterial"))
+		{
+		}
+	};
+	static FConstructorStatics ConstructorStatics;
+	MeshMaterial = ConstructorStatics.DefaultMaterial.Object;
+
+	TileSize = 4096.f;
+	ExtentInTiles = FIntPoint(64,64);
+	LODScale = 1.0f;
+	LODLayer = 4;
 }
 
 
@@ -25,17 +41,15 @@ UQuadtreeMeshComponent::UQuadtreeMeshComponent()
 void UQuadtreeMeshComponent::PostInitProperties()
 {
 	Super::PostInitProperties();
+	SetMaterial(0,MeshMaterial);
 	UpdateBounds();
 	MarkRenderTransformDirty();
+	Update();
 }
 
 int32 UQuadtreeMeshComponent::GetNumMaterials() const
 {
-	if(OverrideMaterials[0] != nullptr)
-	{
-		return 1;
-	}
-	return 0;
+	return 1;
 }
 
 FPrimitiveSceneProxy* UQuadtreeMeshComponent::CreateSceneProxy()
@@ -68,13 +82,11 @@ void UQuadtreeMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 void UQuadtreeMeshComponent::OnVisibilityChanged()
 {
 	Super::OnVisibilityChanged();
-	//UpdateComponentVisibility(true);
 }
 
 void UQuadtreeMeshComponent::OnHiddenInGameChanged()
 {
 	Super::OnHiddenInGameChanged();
-	//UpdateComponentVisibility(true);
 }
 
 void UQuadtreeMeshComponent::UpdateComponentVisibility(bool bIsVisible)
@@ -121,7 +133,7 @@ void UQuadtreeMeshComponent::Update()
 	if(bNeedsRebuild)
 	{
 		RebuildQuadtreeMesh(TileSize,ExtentInTiles);
-		PrecachePSOs();
+		PrecachePSOs(); 
 		bNeedsRebuild = false;
 	}
 }
@@ -132,18 +144,41 @@ FVector UQuadtreeMeshComponent::GetDynamicQuadtreeMeshExtent() const
 	return FVector(TileSize*2,TileSize*2,0.0f);
 }
 
-void UQuadtreeMeshComponent::SetExtentInTiles(FIntPoint NewExtentInTiles)
+void UQuadtreeMeshComponent::SetExtentInTiles()
 {
-	ExtentInTiles = NewExtentInTiles;
-	MarkQuadtreeMeshGridDirty();
-	MarkRenderStateDirty();
+	const FVector2D QuadtreeMeshExtent = FVector2D(TileSize);
+	const float QuadtreeMeshTileSize = TileSize/FMath::Max(2.0,FMath::Pow(2,static_cast<float>(LODLayer)));
+
+	int32 NewExtentInTilesX = FMath::FloorToInt(QuadtreeMeshExtent.X / QuadtreeMeshTileSize);
+	int32 NewExtentInTilesY = FMath::FloorToInt(QuadtreeMeshExtent.Y / QuadtreeMeshTileSize);
+	
+	
+	NewExtentInTilesX = FMath::Max(1, NewExtentInTilesX);
+	NewExtentInTilesY = FMath::Max(1, NewExtentInTilesY);
+	
+	ExtentInTiles = FIntPoint(NewExtentInTilesX, NewExtentInTilesY);
 }
 
 void UQuadtreeMeshComponent::SetTileSize(float NewTileSize)
 {
 	TileSize = NewTileSize;
-	MarkQuadtreeMeshGridDirty();
-	MarkRenderStateDirty();
+}
+
+void UQuadtreeMeshComponent::SetLODLayer(int32 NewLODLayer)
+{
+	LODLayer = NewLODLayer;
+}
+
+void UQuadtreeMeshComponent::SetTessellationFactor(int32 NewFactor)
+{
+	TessellationFactor = FMath::Clamp(NewFactor,1,12);
+}
+
+
+void UQuadtreeMeshComponent::SetMeshMaterial(UMaterialInterface* NewMaterial)
+{
+	MeshMaterial = NewMaterial;
+	SetMaterial(0,MeshMaterial);
 }
 
 FMaterialRelevance UQuadtreeMeshComponent::GetQuadtreeMeshMaterialRelevance(ERHIFeatureLevel::Type InFeatureLevel) const
@@ -175,8 +210,8 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 	TRACE_CPUPROFILER_EVENT_SCOPE(RebuildQuadtreeMesh);
 	FVector Scale = GetComponentScale();
 	// Position snapped to the grid
-	FVector2D GridPosition = FVector2D(FMath::GridSnap<FVector::FReal>(GetComponentLocation().X, InTileSize), FMath::GridSnap<FVector::FReal>(GetComponentLocation().Y, InTileSize));
-	//GridPosition = GridPosition.GetRotated(RotationAngleRad);
+	//FVector2D GridPosition = FVector2D(FMath::GridSnap<FVector::FReal>(GetComponentLocation().X, InTileSize), FMath::GridSnap<FVector::FReal>(GetComponentLocation().Y, InTileSize))+FVector2D(GetComponentLocation().X,GetComponentLocation().Y);
+	FVector2D GridPosition = FVector2D(GetComponentLocation().X,GetComponentLocation().Y);
 	
 	const FVector2D WorldExtent = FVector2D(InTileSize * InExtentInTiles.X, InTileSize * InExtentInTiles.Y);
 
@@ -192,15 +227,18 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 	{
 		return;
 	}
-	RenderData.Material = OverrideMaterials[0];
+	
+	
+	RenderData.Material = MeshMaterial;
 	RenderData.SurfaceBaseHeight = QuadtreeMeshHeight;
 	
-	AQuadtreeMeshActor* QuadtreeMeshOwner = GetOwner<AQuadtreeMeshActor>();
-
-	RenderData.HitProxy = new HActor(/*InActor = */QuadtreeMeshOwner, /*InPrimComponent = */nullptr);
-	RenderData.bQuadtreeMeshSelected = QuadtreeMeshOwner->IsSelected();
-
-
+	if(AActor* QuadtreeMeshOwner = GetOwner())
+	{
+		RenderData.HitProxy = new HActor(/*InActor = */QuadtreeMeshOwner, /*InPrimComponent = */nullptr);
+		RenderData.bQuadtreeMeshSelected = QuadtreeMeshOwner->IsSelected();
+	}
+	
+	
 	const uint32 QuadtreeMeshRenderDataIndex = MeshQuadTree.AddQuadtreeMeshRenderData(RenderData);
 	FBox Bound;
 	Bound.Max = FVector(InTileSize*Scale.X+GridPosition.X,InTileSize*Scale.Y+GridPosition.Y,0.0f);
@@ -210,6 +248,7 @@ void UQuadtreeMeshComponent::RebuildQuadtreeMesh(float InTileSize, const FIntPoi
 	const FBox MeshBounds = Bound;
 	MeshQuadTree.AddQuadtreeMeshTilesInsideBounds(MeshBounds, QuadtreeMeshRenderDataIndex);
 	MeshQuadTree.Unlock(true);
+	
 	MarkRenderStateDirty();
 }
 
@@ -225,25 +264,50 @@ bool UQuadtreeMeshComponent::UpdateQuadtreeMeshInfoTexture()
 void UQuadtreeMeshComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	//NotifyIfMeshMaterialChanged();
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-	
-	if (OverrideMaterials.Num())
+	/*if (OverrideMaterials.Num())
 	{
 		CleanUpOverrideMaterials();
-	}
-	const FName PropertyName = PropertyChangedEvent.Property->GetFName();
+	}*/
+	const FName PropertyName = PropertyChangedEvent.MemberProperty->GetFName();
 	
-	// 检查是否是我们关心的 OverrideMaterials 属性
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(UMeshComponent, OverrideMaterials)
-		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ForceCollapseDensityLevel)
+	
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ForceCollapseDensityLevel)
 		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, TessellationFactor)
-		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, TileSize)
-		|| PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, ExtentInTiles))
+		)
 	{
 		MarkQuadtreeMeshGridDirty();
 		MarkRenderStateDirty();
 	}
-	
+
+	if(PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, TileSize))
+	{
+		SetTileSize(TileSize);
+		SetExtentInTiles();
+		MarkQuadtreeMeshGridDirty();
+		MarkRenderStateDirty();
+	}
+
+	if(PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, LODLayer))
+	{
+		SetLODLayer(LODLayer);
+		SetExtentInTiles();
+		MarkQuadtreeMeshGridDirty();
+		MarkRenderStateDirty();
+	}
+
+	if(PropertyName == GET_MEMBER_NAME_CHECKED(UQuadtreeMeshComponent, MeshMaterial))
+	{
+		SetMaterial(0,MeshMaterial);
+#if WITH_EDITOR
+		//FObjectCacheEventSink::NotifyUsedMaterialsChanged_Concurrent(this, TArray<UMaterialInterface*>({ MeshMaterial }));
+
+		// Update this component streaming data.
+		IStreamingManager::Get().NotifyPrimitiveUpdated(this);
+#endif
+		MarkQuadtreeMeshGridDirty();
+		MarkRenderStateDirty();
+	}
+	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
 #endif
@@ -270,8 +334,30 @@ void UQuadtreeMeshComponent::PostLoad()
 			OverrideMaterials[0]->PrecachePSOs(&FLocalVertexFactory::StaticType, PrecachePSOParams);
 		}
 	}
-	MarkQuadtreeMeshGridDirty();
+#if UE_WITH_PSO_PRECACHING
+	if (!FApp::CanEverRender() || !IsComponentPSOPrecachingEnabled() || !IsInGameThread())
+	{
+		return;
+	}
+
+	// clear the current request data
+	MaterialPSOPrecacheRequestIDs.Empty();
+	PSOPrecacheCompileEvent = nullptr;
+	bPSOPrecacheRequestBoosted = false;
+
+	// Collect the data from the derived classes
+	FPSOPrecacheParams PSOPrecacheParams;
+	SetupPrecachePSOParams(PSOPrecacheParams);
+	FMaterialInterfacePSOPrecacheParamsList PSOPrecacheDataArray;
+	CollectPSOPrecacheData(PSOPrecacheParams, PSOPrecacheDataArray);
+
+	FGraphEventArray GraphEvents;
+	PrecacheMaterialPSOs(PSOPrecacheDataArray, MaterialPSOPrecacheRequestIDs, GraphEvents);
+
+	RequestRecreateRenderStateWhenPSOPrecacheFinished(GraphEvents);
+#endif
 	
+	MarkQuadtreeMeshGridDirty();
 }
 
 

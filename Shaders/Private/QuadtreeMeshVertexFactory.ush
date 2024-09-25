@@ -150,9 +150,9 @@ FMaterialVertexParameters GetMaterialVertexParameters(FVertexFactoryInput Input,
     
 	Result.SceneData = Intermediates.SceneData; 
 	Result.WorldPosition = WorldPosition;
-	Result.TangentToWorld = float3x3(1,0,0,0,1,0,0,0,1);
+	Result.TangentToWorld = mul(TangentToLocal,GetLocalToWorld3x3());
 	Result.PreSkinnedPosition = Input.Position.xyz;
-	Result.PreSkinnedNormal = float3(0,0,1);
+	Result.PreSkinnedNormal = TangentToLocal[2];
 
 #if NUM_MATERIAL_TEXCOORDS_VERTEX
 	// Water doesn't get texcoords from its input verts, so all the vert texcoords will default to the same world position

@@ -37,11 +37,11 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Compone
 	}
 
 	int32 NumQuads = static_cast<int32>(FMath::Pow(2.0f, static_cast<float>(Component->GetTessellationFactor())));
-
+	DensityCount = FMath::Min(MeshQuadTree.GetTreeDepth(), static_cast<int32>(FMath::FloorLog2(NumQuads)));
 	QuadtreeMeshVertexFactories.Reserve(MeshQuadTree.GetTreeDepth());
 	for (uint8 i = 0; i < MeshQuadTree.GetTreeDepth(); i++)
 	{
-		QuadtreeMeshVertexFactories.Add(new FQuadtreeMeshVertexFactory(GetScene().GetFeatureLevel(), NumQuads, LODScale));
+		QuadtreeMeshVertexFactories.Add(new FQuadtreeMeshVertexFactory(GetScene().GetFeatureLevel(), NumQuads,LODScale));
 		BeginInitResource(QuadtreeMeshVertexFactories.Last());
 
 		NumQuads /= 2;
@@ -53,8 +53,8 @@ FQuadtreeMeshSceneProxy::FQuadtreeMeshSceneProxy(UQuadtreeMeshComponent* Compone
 	}
 
 	QuadtreeMeshVertexFactories.Shrink();
-	DensityCount = QuadtreeMeshVertexFactories.Num();
-
+	check(DensityCount == QuadtreeMeshVertexFactories.Num());
+	
 	const int32 TotalLeafNodes = MeshQuadTree.GetMaxLeafCount();
 	QuadtreeMeshInstanceDataBuffers = new FQuadtreeMeshInstanceDataBuffers(TotalLeafNodes);
 

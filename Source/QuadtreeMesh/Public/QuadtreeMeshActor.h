@@ -36,6 +36,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuadtreeMesh", meta = (ClampMin = "1"))
 	int32 LODLayer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuadtreeMesh", meta = (ClampMin = "1"))
+	int32 TessellationFactor;
 	
 private:
 	bool bNeedInfoRebuild = false;

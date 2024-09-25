@@ -672,7 +672,15 @@ void FMeshQuadTree::FNode::AddNodeForRender(const FNodeData& InNodeData,
 
 
 	// Instance Hit Proxy ID
-	const FLinearColor HitProxyColor = InQuadtreeMeshRenderData.HitProxy->Id.GetColor().ReinterpretAsLinear();
+	FLinearColor HitProxyColor;
+	if(InQuadtreeMeshRenderData.HitProxy)
+	{
+		HitProxyColor = InQuadtreeMeshRenderData.HitProxy->Id.GetColor().ReinterpretAsLinear();
+	}
+	else
+	{
+		HitProxyColor = FLinearColor::Black;
+	}
 	StagingData.Data[2].X = HitProxyColor.R;
 	StagingData.Data[2].Y = HitProxyColor.G;
 	StagingData.Data[2].Z = HitProxyColor.B;

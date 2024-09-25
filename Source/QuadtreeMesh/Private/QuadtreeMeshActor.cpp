@@ -9,7 +9,8 @@
 // Sets default values
 AQuadtreeMeshActor::AQuadtreeMeshActor()
 	:QuadtreeMeshSize(2048.f),
-     LODLayer(4)
+     LODLayer(4),
+	 TessellationFactor(6)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -28,9 +29,9 @@ AQuadtreeMeshActor::AQuadtreeMeshActor()
 	};
 	static FConstructorStatics ConstructorStatics;
 	MeshMaterial = ConstructorStatics.DefaultMaterial.Object;
-	QuadtreeMeshComponent->SetMaterial(0,MeshMaterial);
+	QuadtreeMeshComponent->SetMeshMaterial(MeshMaterial);
 	
-	QuadtreeMeshComponent->Update();
+	//QuadtreeMeshComponent->Update();
 }
 
 // Called when the game starts or when spawned
@@ -81,6 +82,7 @@ void AQuadtreeMeshActor::MarkForRebuild(EQuadtreeMeshRebuildFlags Flags)
 	if (EnumHasAnyFlags(Flags, EQuadtreeMeshRebuildFlags::UpdateQuadtreeMesh))
 	{
 		QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
+		QuadtreeMeshComponent->MarkRenderStateDirty();
 	}
 	if (EnumHasAnyFlags(Flags, EQuadtreeMeshRebuildFlags::UpdateQuadtreeMeshInfoTexture))
 	{
@@ -144,9 +146,16 @@ void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 	{
 		OnExtentChanged();
 	}
+
+	if(PropertyName == GET_MEMBER_NAME_CHECKED(AQuadtreeMeshActor,TessellationFactor))
+	{
+		QuadtreeMeshComponent->SetTessellationFactor(TessellationFactor);
+		MarkForRebuild(EQuadtreeMeshRebuildFlags::All);
+	}
+	
 	if(PropertyName == GET_MEMBER_NAME_CHECKED(AQuadtreeMeshActor,MeshMaterial))
 	{
-		QuadtreeMeshComponent->SetMaterial(0,MeshMaterial);
+		QuadtreeMeshComponent->SetMeshMaterial(MeshMaterial);
 		QuadtreeMeshComponent->MarkQuadtreeMeshGridDirty();
 		QuadtreeMeshComponent->MarkRenderStateDirty();
 	}
@@ -166,20 +175,8 @@ void AQuadtreeMeshActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 void AQuadtreeMeshActor::OnExtentChanged()
 {
 	QuadtreeMeshComponent->SetTileSize(QuadtreeMeshSize);
-	
-	
-	const FVector2D QuadtreeMeshExtent = FVector2D(QuadtreeMeshSize);
-	const float QuadtreeMeshTileSize = QuadtreeMeshSize/FMath::Max(2.0,FMath::Pow(2,static_cast<float>(LODLayer)));
-
-	int32 NewExtentInTilesX = FMath::FloorToInt(QuadtreeMeshExtent.X / QuadtreeMeshTileSize);
-	int32 NewExtentInTilesY = FMath::FloorToInt(QuadtreeMeshExtent.Y / QuadtreeMeshTileSize);
-	
-	// We must ensure that the zone is always at least 1x1
-	NewExtentInTilesX = FMath::Max(1, NewExtentInTilesX);
-	NewExtentInTilesY = FMath::Max(1, NewExtentInTilesY);
-
-	QuadtreeMeshComponent->SetExtentInTiles(FIntPoint(NewExtentInTilesX, NewExtentInTilesY));
-	
+	QuadtreeMeshComponent->SetLODLayer(LODLayer);
+	QuadtreeMeshComponent->SetExtentInTiles();
 	MarkForRebuild(EQuadtreeMeshRebuildFlags::All);
 }
 
